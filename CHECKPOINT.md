@@ -147,7 +147,14 @@ Copy the workflow's checklist into each step's notes and tick it as you go.
   - a pre-commit secret hook, `.gitattributes`, and per-step branches (Backlog);
   - the unused scaffold SVGs (added to the Step 4 list).
 
-**Commits:** see `git log --oneline v0.1.0`. The hashes are listed in the record commit below.
+**Commits** (milestones, oldest first). This record commit is tagged `v0.1.0`:
+- `35178d3` chore: scaffold Next.js 16 app, tooling and Docker deploy
+- `19445d6` feat(db): schema, migrations and versioned seed
+- `99eb421` feat(core): R/stats engine, price parsing and UTC helpers with tests
+- `4936735` feat(auth): password login, JWT session, proxy gate, UI primitives
+- `868b59c` feat: journal, idea editor, setups, analytics, settings and APIs
+- `141fc82` feat(backtest): coin-agnostic hammer + thrust backtest scripts and results
+- `56daf48` docs: agent guide, product/architecture/data docs, checkpoint, changelog
 
 **Original plan:**
 Reason: there's no git repo yet (neither `edge-journal/` nor its parent). Every later step should be a reviewable, revertible commit.
