@@ -1,0 +1,181 @@
+import { describe, expect, it } from "vitest";
+import {
+  compareScenarios,
+  equityCurve,
+  groupSummaries,
+  outcomeOf,
+  plannedRR,
+  realizedR,
+  sampleConfidence,
+  sessionOf,
+  skipAudit,
+  stopIsValid,
+  summarize,
+} from "./stats";
+
+describe("R math", () => {
+  it("computes long R", () => {
+    expect(realizedR("long", 100, 90, 120)).toBe(2);
+    expect(realizedR("long", 100, 90, 90)).toBe(-1);
+    expect(realizedR("long", 100, 90, 95)).toBe(-0.5);
+  });
+
+  it("computes short R", () => {
+    expect(realizedR("short", 100, 110, 80)).toBe(2);
+    expect(realizedR("short", 100, 110, 110)).toBe(-1);
+  });
+
+  it("returns null when open or zero risk", () => {
+    expect(realizedR("long", 100, 90, null)).toBeNull();
+    expect(realizedR("long", 100, 100, 120)).toBeNull();
+  });
+
+  it("computes planned RR to target", () => {
+    expect(plannedRR("long", 100, 90, 125)).toBe(2.5);
+    expect(plannedRR("short", 2000, 2050, 1900)).toBe(2);
+    expect(plannedRR("long", 100, 90, null)).toBeNull();
+  });
+
+  it("validates stop side", () => {
+    expect(stopIsValid("long", 100, 90)).toBe(true);
+    expect(stopIsValid("long", 100, 110)).toBe(false);
+    expect(stopIsValid("short", 100, 110)).toBe(true);
+  });
+
+  it("classifies outcome with BE threshold", () => {
+    expect(outcomeOf(0.05, 0.1)).toBe("be");
+    expect(outcomeOf(-0.1, 0.1)).toBe("be");
+    expect(outcomeOf(0.5, 0.1)).toBe("win");
+    expect(outcomeOf(-1, 0.1)).toBe("loss");
+    expect(outcomeOf(null, 0.1)).toBe("open");
+  });
+});
+
+const pts = (rs: number[]) => rs.map((r, i) => ({ id: i + 1, r, date: `2026-09-${String(i + 1).padStart(2, "0")}` }));
+
+describe("summarize", () => {
+  it("handles empty input", () => {
+    const s = summarize([]);
+    expect(s.count).toBe(0);
+    expect(s.winRate).toBeNull();
+    expect(s.expectancy).toBeNull();
+    expect(s.totalR).toBe(0);
+  });
+
+  it("computes core metrics", () => {
+    const s = summarize(pts([2, -1, -1, 3, 0.05, -1]));
+    expect(s.count).toBe(6);
+    expect(s.wins).toBe(2);
+    expect(s.losses).toBe(3);
+    expect(s.breakevens).toBe(1);
+    expect(s.winRate).toBeCloseTo(2 / 6);
+    expect(s.totalR).toBeCloseTo(2.05);
+    expect(s.expectancy).toBeCloseTo(2.05 / 6);
+    expect(s.avgWin).toBeCloseTo(2.5);
+    expect(s.avgLoss).toBeCloseTo(-1);
+    expect(s.profitFactor).toBeCloseTo(5 / 3);
+    expect(s.best).toBe(3);
+    expect(s.worst).toBe(-1);
+  });
+
+  it("computes drawdown and streaks in date order", () => {
+    // cumulative: 1, 0, -1, -2, 1 → peak 1, trough -2 → DD 3
+    const s = summarize(pts([1, -1, -1, -1, 3]));
+    expect(s.maxDrawdown).toBeCloseTo(3);
+    expect(s.longestLossStreak).toBe(3);
+    expect(s.longestWinStreak).toBe(1);
+  });
+
+  it("sorts by date before streaks", () => {
+    const s = summarize([
+      { id: 1, r: -1, date: "2026-09-03" },
+      { id: 2, r: 1, date: "2026-09-01" },
+      { id: 3, r: -1, date: "2026-09-02" },
+    ]);
+    expect(s.longestLossStreak).toBe(2);
+  });
+
+  it("profit factor is null with no losses", () => {
+    expect(summarize(pts([1, 2])).profitFactor).toBeNull();
+  });
+
+  it("tracks plan adherence ignoring unknowns", () => {
+    const s = summarize([
+      { id: 1, r: 1, date: "a", followedPlan: true },
+      { id: 2, r: -1, date: "b", followedPlan: false },
+      { id: 3, r: -1, date: "c", followedPlan: null },
+    ]);
+    expect(s.followedPlanPct).toBeCloseTo(0.5);
+  });
+});
+
+describe("equity + grouping", () => {
+  it("builds a cumulative curve", () => {
+    expect(equityCurve(pts([1, -1, 2])).map((p) => p.cum)).toEqual([1, 0, 2]);
+  });
+
+  it("places multi-key points in every group", () => {
+    const data = pts([1, -1, 2]).map((p, i) => ({ ...p, tags: [["a"], ["a", "b"], []][i] }));
+    const g = groupSummaries(data, (p) => p.tags);
+    const byKey = Object.fromEntries(g.map((x) => [x.key, x.summary.count]));
+    expect(byKey).toEqual({ a: 2, b: 1, "—": 1 });
+  });
+});
+
+describe("scenario comparison + skip audit", () => {
+  it("diffs variant vs primary", () => {
+    const c = compareScenarios([
+      { ideaId: 1, date: "a", primaryR: -1, variantR: 0 },
+      { ideaId: 2, date: "b", primaryR: 2, variantR: 0 },
+    ]);
+    expect(c.pairs).toBe(2);
+    expect(c.deltaTotalR).toBe(-1);
+    expect(c.variantBetterCount).toBe(1);
+  });
+
+  it("audits skipped ideas", () => {
+    const a = skipAudit(pts([2, -1, -1]));
+    expect(a.leftOnTable).toBe(2);
+    expect(a.lossesAvoided).toBe(2);
+    expect(a.net).toBe(0);
+  });
+});
+
+describe("misc", () => {
+  it("rates sample size", () => {
+    expect(sampleConfidence(0)).toBe("none");
+    expect(sampleConfidence(10)).toBe("low");
+    expect(sampleConfidence(30)).toBe("early");
+    expect(sampleConfidence(80)).toBe("solid");
+  });
+
+  it("maps UTC hour to session", () => {
+    expect(sessionOf("2026-09-23T03:00:00Z")).toBe("Asia");
+    expect(sessionOf("2026-09-23T09:00:00Z")).toBe("London");
+    expect(sessionOf("2026-09-23T14:00:00Z")).toBe("London/NY overlap");
+    expect(sessionOf("2026-09-23T18:00:00Z")).toBe("New York");
+    expect(sessionOf("2026-09-23T22:00:00Z")).toBe("After hours");
+  });
+});
+
+describe("review fixes", () => {
+  it("counts not-filled scenarios as 0R", async () => {
+    const { scenarioR } = await import("./stats");
+    expect(scenarioR("long", { entry: 100, stop: 90, exitPrice: null, exitReason: "not_filled" })).toBe(0);
+    expect(scenarioR("long", { entry: 100, stop: 90, exitPrice: 120, exitReason: "target" })).toBe(2);
+  });
+
+  it("counts a point once per group even if keys repeat", () => {
+    const g = groupSummaries([{ id: 1, r: 3, date: "a" }], () => ["dup", "dup"]);
+    expect(g).toHaveLength(1);
+    expect(g[0].summary.totalR).toBe(3);
+  });
+
+  it("uses DST-aware sessions", () => {
+    // US open 09:30 New York = 13:30 UTC in summer, 14:30 UTC in winter — both in the overlap.
+    expect(sessionOf("2026-07-01T13:30:00Z")).toBe("London/NY overlap");
+    expect(sessionOf("2026-12-01T14:30:00Z")).toBe("London/NY overlap");
+    // 07:30 UTC in winter is London (07:30 GMT), in summer London too (08:30 BST).
+    expect(sessionOf("2026-12-01T07:30:00Z")).toBe("London");
+  });
+});
