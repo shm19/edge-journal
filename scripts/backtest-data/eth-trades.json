@@ -1,0 +1,226 @@
+{
+ "summary": {
+  "symbol": "ETH",
+  "source": "hyperliquid ETH perp (api.hyperliquid.xyz candleSnapshot)",
+  "candles_total": 1776,
+  "candles_in_window": 720,
+  "params": {
+   "min_range_atr": 0.7,
+   "thrust_bars": 3,
+   "thrust_body": 0.6,
+   "thrust_atr": 1.0,
+   "valid_bars": 24,
+   "buffer": 0.0005,
+   "fta_look": 120,
+   "min_rr": 1.5,
+   "overlap": false,
+   "intact": true
+  },
+  "notes": {
+   "no_fta": 1,
+   "no_fill": 1,
+   "tp_before_fill": 1,
+   "blocked": 0,
+   "patterns": 35,
+   "thrusts": 7
+  },
+  "taken": {
+   "n": 2,
+   "wins": 1,
+   "losses": 1,
+   "be": 0,
+   "win_rate": 0.5,
+   "expectancy": 0.625,
+   "total": 1.25,
+   "pf": 2.25,
+   "max_dd": 1.0
+  },
+  "taken_be_variant": {
+   "n": 2,
+   "wins": 0,
+   "losses": 1,
+   "be": 1,
+   "win_rate": 0.0,
+   "expectancy": -0.5,
+   "total": -1.0,
+   "pf": 0.0,
+   "max_dd": 1.0
+  },
+  "longs": {
+   "n": 2,
+   "wins": 1,
+   "losses": 1,
+   "be": 0,
+   "win_rate": 0.5,
+   "expectancy": 0.625,
+   "total": 1.25,
+   "pf": 2.25,
+   "max_dd": 1.0
+  },
+  "shorts": {
+   "n": 0
+  },
+  "skipped": {
+   "n": 2,
+   "wins": 2,
+   "losses": 0,
+   "be": 0,
+   "win_rate": 1.0,
+   "expectancy": 0.826,
+   "total": 1.65,
+   "pf": null,
+   "max_dd": 0
+  }
+ },
+ "rules": "All on 1h candles (UTC). ATR = Wilder ATR(14) of the bar *before* the candle being judged.\n\n1. **Hammer (long)**: lower wick >= 2x body; upper wick <= max(0.5x body, 25% of range); range >= 0.7x ATR;\n   after a down move (close < close 3 bars earlier). **Shooting star (short)**: mirror (upper wick >= 2x body,\n   lower wick <= max(0.5x body, 25% range), close > close 3 bars earlier).\n2. **Thrust**: the first of the next 1-3 candles that closes above the hammer high, is bullish, has body >= 60% of\n   its range and range >= 1x ATR. No candle between hammer and thrust may trade below the hammer low (pattern\n   failed). Mirror for shooting stars (bearish close below the star low, nothing above the star high in between).\n3. **Entry**: limit buy at the hammer high (hammer head), placed at the thrust close, valid 24 bars. Cancel if not\n   filled, or if price reaches the TP before filling. If the fill candle also reaches the TP, assume TP came first\n   (cancel). Shorts: limit sell at the star low.\n4. **Stop**: hammer low - 0.05% (shorts: star high + 0.05%).\n5. **TP = first FTA**: nearest (lowest) fractal swing high (high > 3 bars each side, confirmed by thrust close, within\n   the last 120 bars) above the thrust high. Fallback: the 120-bar highest high if above the thrust high; else no\n   FTA -> no trade. Mirror for shorts (swing lows below the thrust low).\n6. **Min R:R**: planned R:R to the FTA < 1.5 -> idea logged as Skipped (\"R:R to FTA below 1.5\"), outcome still\n   simulated.\n7. **Exit**: first of stop / target after the fill (the fill candle counts for the stop). Stop and target in the same\n   candle -> stop. Still open at 2026-10-02 00:00 UTC -> closed at the last close, reason \"time\".\n8. **One position per direction**: a new signal is ignored while an order/position in the same direction (pending or\n   open) exists. Long and short can coexist. Skipped (low-R:R) ideas do not block.\n9. **BE-stop alternative**: same entry/target; after a candle's high (low for shorts) reaches +1R the stop moves to\n   entry from the *next* candle on (exit at entry, reason \"be\").\n",
+ "trades": [
+  {
+   "direction": "long",
+   "pattern": "Hammer",
+   "pattern_t": "2026-09-02T10:00:00.000Z",
+   "thrust_t": "2026-09-02T13:00:00.000Z",
+   "fill_t": "2026-09-02T17:00:00.000Z",
+   "exit_t": "2026-09-03T13:00:00.000Z",
+   "be_exit_t": "2026-09-02T23:00:00.000Z",
+   "pat": {
+    "o": 2377.0,
+    "h": 2377.0,
+    "l": 2356.0,
+    "c": 2372.4
+   },
+   "thrust": {
+    "o": 2377.7,
+    "h": 2419.4,
+    "l": 2377.7,
+    "c": 2403.6
+   },
+   "atr": 18.9,
+   "entry": 2377.0,
+   "stop": 2354.8,
+   "target": 2426.9,
+   "fta_src": "swing high",
+   "rr": 2.25,
+   "exit": 2426.9,
+   "reason": "target",
+   "r": 2.25,
+   "be_exit": 2377.0,
+   "be_reason": "be",
+   "be_r": 0.0,
+   "status": "taken",
+   "htf_bias": "with",
+   "bars_to_fill": 4,
+   "bars_held": 20
+  },
+  {
+   "direction": "long",
+   "pattern": "Hammer",
+   "pattern_t": "2026-09-16T08:00:00.000Z",
+   "thrust_t": "2026-09-16T11:00:00.000Z",
+   "fill_t": "2026-09-16T12:00:00.000Z",
+   "exit_t": "2026-09-16T14:00:00.000Z",
+   "be_exit_t": "2026-09-16T14:00:00.000Z",
+   "pat": {
+    "o": 2395.8,
+    "h": 2402.5,
+    "l": 2381.8,
+    "c": 2401.8
+   },
+   "thrust": {
+    "o": 2404.0,
+    "h": 2428.7,
+    "l": 2402.0,
+    "c": 2421.6
+   },
+   "atr": 20.6,
+   "entry": 2402.5,
+   "stop": 2380.6,
+   "target": 2487.9,
+   "fta_src": "swing high",
+   "rr": 3.9,
+   "exit": 2380.6,
+   "reason": "stop",
+   "r": -1.0,
+   "be_exit": 2380.6,
+   "be_reason": "stop",
+   "be_r": -1.0,
+   "status": "taken",
+   "htf_bias": "against",
+   "bars_to_fill": 1,
+   "bars_held": 2
+  },
+  {
+   "direction": "long",
+   "pattern": "Hammer",
+   "pattern_t": "2026-09-22T05:00:00.000Z",
+   "thrust_t": "2026-09-22T08:00:00.000Z",
+   "fill_t": "2026-09-22T09:00:00.000Z",
+   "exit_t": "2026-09-22T23:00:00.000Z",
+   "be_exit_t": "2026-09-22T23:00:00.000Z",
+   "pat": {
+    "o": 2730.7,
+    "h": 2740.8,
+    "l": 2716.2,
+    "c": 2734.8
+   },
+   "thrust": {
+    "o": 2728.1,
+    "h": 2756.3,
+    "l": 2722.5,
+    "c": 2750.0
+   },
+   "atr": 23.9,
+   "entry": 2740.8,
+   "stop": 2714.8,
+   "target": 2772.0,
+   "fta_src": "swing high",
+   "rr": 1.2,
+   "exit": 2772.0,
+   "reason": "target",
+   "r": 1.202,
+   "be_exit": 2772.0,
+   "be_reason": "target",
+   "be_r": 1.202,
+   "status": "skipped",
+   "htf_bias": "with",
+   "bars_to_fill": 1,
+   "bars_held": 14
+  },
+  {
+   "direction": "short",
+   "pattern": "Shooting star",
+   "pattern_t": "2026-09-28T17:00:00.000Z",
+   "thrust_t": "2026-09-28T19:00:00.000Z",
+   "fill_t": "2026-09-28T20:00:00.000Z",
+   "exit_t": "2026-09-29T01:00:00.000Z",
+   "be_exit_t": "2026-09-29T01:00:00.000Z",
+   "pat": {
+    "o": 2687.0,
+    "h": 2720.5,
+    "l": 2682.0,
+    "c": 2696.0
+   },
+   "thrust": {
+    "o": 2700.3,
+    "h": 2701.2,
+    "l": 2664.7,
+    "c": 2673.6
+   },
+   "atr": 19.2,
+   "entry": 2682.0,
+   "stop": 2721.9,
+   "target": 2664.1,
+   "fta_src": "swing low",
+   "rr": 0.45,
+   "exit": 2664.1,
+   "reason": "target",
+   "r": 0.449,
+   "be_exit": 2664.1,
+   "be_reason": "target",
+   "be_r": 0.449,
+   "status": "skipped",
+   "htf_bias": "against",
+   "bars_to_fill": 1,
+   "bars_held": 5
+  }
+ ]
+}
