@@ -65,7 +65,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
             Expectancy <RValue r={summary.expectancy} be={0} />
           </span>
           <span className="text-muted">
-            Total <RValue r={summary.count ? summary.totalR : null} be={0} />
+            Total <RValue r={summary.totalR} be={0} />
           </span>
           <span className="ml-auto">
             <SampleBadge n={summary.count} />

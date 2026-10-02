@@ -18,7 +18,7 @@ import {
   SKIP_REASON_GROUP,
   tags,
 } from "@/db/schema";
-import { requireAuth } from "./auth";
+import { isAuthenticated } from "./auth";
 import {
   firstError,
   ideaSchema,
@@ -30,6 +30,9 @@ import {
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
+// Actions never redirect (that would throw away a half-written editor); pages still do.
+const SESSION_EXPIRED = { ok: false, error: "Session expired, sign in again in another tab, then save" } as const;
+
 function removeUpload(fileName: string) {
   const full = path.join(UPLOAD_DIR, path.basename(fileName));
   fs.promises.unlink(full).catch(() => {});
@@ -37,6 +40,7 @@ function removeUpload(fileName: string) {
 
 const SKIP_GROUP_LOCKED = `The “${SKIP_REASON_GROUP}” tag group feeds the Skips analytics, so it can't be renamed or deleted. Edit its tags instead.`;
 
+// Kept deliberately broad: it also clears the client router cache, so every view reflects a mutation. Don't "optimise" it.
 function revalidateAll() {
   revalidatePath("/", "layout");
 }
@@ -44,9 +48,9 @@ function revalidateAll() {
 // ---------- Ideas ----------
 
 export async function saveIdea(payload: unknown): Promise<ActionResult<{ id: number }>> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   const parsed = ideaSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error, payload) };
   const { id, tagIds, scenarios: scen, attachments: atts, mistakes, ...fields } = parsed.data;
   const now = new Date().toISOString();
   // References may have been deleted in another tab — drop them instead of failing on a foreign key.
@@ -57,7 +61,6 @@ export async function saveIdea(payload: unknown): Promise<ActionResult<{ id: num
   for (const s of scen) if (s.scenarioTypeId != null && !typeIds.has(s.scenarioTypeId)) s.scenarioTypeId = null;
   const mistakeTypeIds = new Set(db.select({ id: mistakeTypes.id }).from(mistakeTypes).all().map((t) => t.id));
   const validMistakes = mistakes.filter((m) => mistakeTypeIds.has(m.mistakeTypeId));
-  if (fields.status !== "forward_test") fields.outcome = null;
   const removedFiles: string[] = [];
 
   try {
@@ -129,11 +132,17 @@ export async function saveIdea(payload: unknown): Promise<ActionResult<{ id: num
       }
       for (const { id: aid, ...a } of atts) {
         if (aid) {
+          // The ideaId guard makes a foreign or stale id a harmless no-op (nothing is updated, nothing is created).
           tx.update(attachments)
             .set({ caption: a.caption, kind: a.kind })
             .where(and(eq(attachments.id, aid), eq(attachments.ideaId, ideaId)))
             .run();
         } else {
+          // A new file must have been uploaded and must not already belong to any idea (deleting one would unlink it for both).
+          if (!fs.existsSync(path.join(UPLOAD_DIR, path.basename(a.filePath)))) throw new Error("An attached image is missing, upload it again");
+          if (tx.select({ id: attachments.id }).from(attachments).where(eq(attachments.filePath, a.filePath)).get()) {
+            throw new Error("An attached image is already used by another idea");
+          }
           tx.insert(attachments)
             .values({ ...a, ideaId })
             .run();
@@ -151,7 +160,7 @@ export async function saveIdea(payload: unknown): Promise<ActionResult<{ id: num
 }
 
 export async function deleteIdea(id: number): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   const files = db.select({ f: attachments.filePath }).from(attachments).where(eq(attachments.ideaId, id)).all();
   db.delete(ideas).where(eq(ideas.id, id)).run();
   files.forEach((f) => removeUpload(f.f));
@@ -162,9 +171,9 @@ export async function deleteIdea(id: number): Promise<ActionResult> {
 // ---------- Setups ----------
 
 export async function saveSetup(payload: unknown): Promise<ActionResult<{ id: number }>> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   const parsed = setupSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error, payload) };
   const { id, ...fields } = parsed.data;
   try {
     let sid = id;
@@ -186,7 +195,7 @@ export async function saveSetup(payload: unknown): Promise<ActionResult<{ id: nu
 }
 
 export async function deleteSetup(id: number): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   db.delete(setups).where(eq(setups.id, id)).run();
   revalidateAll();
   return { ok: true };
@@ -195,9 +204,9 @@ export async function deleteSetup(id: number): Promise<ActionResult> {
 // ---------- Tags & scenario types ----------
 
 export async function saveTag(payload: unknown): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   const parsed = tagSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error, payload) };
   const { id, ...fields } = parsed.data;
   const clash = db
     .select({ id: tags.id, name: tags.name, group: tags.group })
@@ -214,16 +223,16 @@ export async function saveTag(payload: unknown): Promise<ActionResult> {
 }
 
 export async function deleteTag(id: number): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   db.delete(tags).where(eq(tags.id, id)).run();
   revalidateAll();
   return { ok: true };
 }
 
 export async function saveScenarioType(payload: unknown): Promise<ActionResult<{ id: number }>> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   const parsed = scenarioTypeSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error, payload) };
   const { id, ...fields } = parsed.data;
   try {
     let tid = id;
@@ -237,9 +246,9 @@ export async function saveScenarioType(payload: unknown): Promise<ActionResult<{
 }
 
 export async function saveMistakeType(payload: unknown): Promise<ActionResult<{ id: number }>> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   const parsed = scenarioTypeSchema.safeParse(payload); // same shape: name + description
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error, payload) };
   const { id, ...fields } = parsed.data;
   try {
     let tid = id;
@@ -253,14 +262,14 @@ export async function saveMistakeType(payload: unknown): Promise<ActionResult<{ 
 }
 
 export async function deleteMistakeType(id: number): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   db.delete(mistakeTypes).where(eq(mistakeTypes.id, id)).run(); // its mistake entries cascade
   revalidateAll();
   return { ok: true };
 }
 
 export async function deleteScenarioType(id: number): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   // Alternatives of a deleted type would become indistinguishable from the primary; remove them.
   db.transaction((tx) => {
     tx.delete(scenarios)
@@ -275,9 +284,9 @@ export async function deleteScenarioType(id: number): Promise<ActionResult> {
 // ---------- Settings ----------
 
 export async function saveSettings(payload: unknown): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   const parsed = settingsSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error, payload) };
   const s = parsed.data;
   const rows = [
     { key: "beThresholdR", value: String(s.beThresholdR) },
@@ -295,7 +304,7 @@ export async function saveSettings(payload: unknown): Promise<ActionResult> {
 }
 
 export async function renameTagGroup(from: string, to: string): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   if (from === SKIP_REASON_GROUP) return { ok: false, error: SKIP_GROUP_LOCKED };
   const name = to.trim();
   if (!name || name.length > 40) return { ok: false, error: "Group name must be 1–40 characters" };
@@ -312,7 +321,7 @@ export async function renameTagGroup(from: string, to: string): Promise<ActionRe
 }
 
 export async function deleteTagGroup(group: string): Promise<ActionResult> {
-  await requireAuth();
+  if (!(await isAuthenticated())) return SESSION_EXPIRED;
   if (group === SKIP_REASON_GROUP) return { ok: false, error: SKIP_GROUP_LOCKED };
   db.delete(tags).where(eq(tags.group, group)).run(); // idea_tags rows cascade
   revalidateAll();

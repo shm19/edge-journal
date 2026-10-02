@@ -25,7 +25,7 @@ export const scenarioSchema = z.object({
   exitPrice: price.nullable(),
   exitReason: z.enum(EXIT_REASONS).nullable(),
   notes: text(5000),
-});
+}).transform((s) => (s.exitReason === "not_filled" ? { ...s, exitPrice: null } : s)); // never entered → no exit price
 
 export const mistakeInputSchema = z.object({
   mistakeTypeId: z.number().int().positive(),
@@ -94,8 +94,20 @@ export const ideaSchema = z
           path: ["scenarios", i, "stop"],
           message:
             s.stop === s.entry
-              ? "Stop can't equal entry — keep the initial stop (it defines 1R) and use the Breakeven exit instead"
-              : `Stop must be ${v.direction === "long" ? "below" : "above"} entry for a ${v.direction}`,
+              ? "can't equal entry — keep the initial stop (it defines 1R) and use the Breakeven exit instead"
+              : `must be ${v.direction === "long" ? "below" : "above"} entry for a ${v.direction}`,
+        });
+      }
+    });
+    v.scenarios.forEach((s, i) => {
+      if (s.exitPrice != null && !s.exitReason) {
+        ctx.addIssue({ code: "custom", path: ["scenarios", i, "exitReason"], message: "Pick an exit reason for the exit price" });
+      }
+      if (s.target != null && (v.direction === "long" ? s.target <= s.entry : s.target >= s.entry)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["scenarios", i, "target"],
+          message: `must be ${v.direction === "long" ? "above" : "below"} entry for a ${v.direction}`,
         });
       }
     });
@@ -153,6 +165,7 @@ const FIELD_LABELS: Record<string, string> = {
   stop: "Stop",
   target: "Target",
   exitPrice: "Exit",
+  exitReason: "Exit reason",
   openedAt: "Opened",
   closedAt: "Closed",
   skipReason: "Skip reason",
@@ -163,18 +176,25 @@ const FIELD_LABELS: Record<string, string> = {
   group: "Group",
 };
 
-/** Human-readable first validation error, e.g. "Alternative #1 · Stop: …". */
-export function firstError(err: z.ZodError): string {
+/**
+ * Human-readable first validation error, e.g. "Alternative #1 · Stop: …".
+ * Pass the original input so scenarios are labelled by `isPrimary` instead of by position.
+ */
+export function firstError(err: z.ZodError, input?: unknown): string {
   const issue = err.issues[0];
   if (!issue) return "Invalid input";
   const path = issue.path;
   let where = "";
   if (path[0] === "scenarios" && typeof path[1] === "number") {
-    where = path[1] === 0 ? "Primary" : `Alternative #${path[1]}`;
+    const list = ((input as { scenarios?: { isPrimary?: boolean }[] } | null)?.scenarios ?? []) as { isPrimary?: boolean }[];
+    const i = path[1];
+    const primary = list.length ? list[i]?.isPrimary === true : i === 0;
+    where = primary ? "Primary" : `Alternative #${list.slice(0, i).filter((x) => !x?.isPrimary).length + 1}`;
     if (path[2]) where += ` · ${FIELD_LABELS[String(path[2])] ?? String(path[2])}`;
   } else if (path.length) {
     where = FIELD_LABELS[String(path[path.length - 1])] ?? String(path[path.length - 1]);
   }
   const msg = /expected number/.test(issue.message) ? "must be a number" : issue.message;
-  return where && !["scenarios", "outcome", "skipReason"].includes(String(path[0])) ? `${where}: ${msg}` : msg;
+  const labelled = path[0] === "scenarios" ? path.length > 2 : !["outcome", "skipReason"].includes(String(path[0]));
+  return where && labelled ? `${where}: ${msg}` : msg;
 }

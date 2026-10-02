@@ -51,6 +51,7 @@ SQLite does not index foreign keys, so these are explicit: `scenarios(idea_id)`,
   - streaks;
   - followedPlanPct.
 - An idea's stats date is `closed_at ?? opened_at`.
+- A blank close time defaults to the open time when an exit is entered in the editor (never "now"); the editor treats a close time equal to the open time as automatic, so changing *Opened* moves it along.
 - `groupSummaries(points, keysOf)`: a point can fall in several groups (tags), but is counted once per group.
 - `compareScenarios(pairs)`: primary vs alternative, for ideas where both are closed.
 - `skipAudit(points)`: left on table (Σ positive R), losses avoided (Σ |negative R|), net.
@@ -76,7 +77,7 @@ The seed runs once on an empty DB. Later additive seed changes go in `upgrade()`
 
 Seed version history:
 - **v2** adds the "Skip reason" tag group.
-- **v4** deletes the old `timezone` setting (the app became UTC-only).
 - **v3** creates the mistake types and converts the old "Mistake" tag group into `idea_mistakes` rows, then deletes those tags.
+- **v4** deletes the old `timezone` setting (the app became UTC-only).
 
 Note: enum changes on `text(..., { enum })` columns are TypeScript-only and need no migration. New columns do need one.

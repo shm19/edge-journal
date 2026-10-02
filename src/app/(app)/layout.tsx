@@ -1,6 +1,6 @@
 import { Sidebar } from "@/components/nav";
 import { requireAuth } from "@/lib/auth";
-import { logout } from "../login/actions";
+import { logout } from "@/app/login/actions";
 
 export const dynamic = "force-dynamic";
 

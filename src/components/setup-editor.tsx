@@ -156,7 +156,8 @@ export function SetupEditor({ initial, tradeCount = 0 }: { initial: SetupForm; t
                   : "Delete this setup?";
                 if (!confirm(msg)) return;
                 start(async () => {
-                  await deleteSetup(f.id!);
+                  const res = await deleteSetup(f.id!);
+                  if (!res.ok) return setError(res.error);
                   router.push("/setups");
                 });
               }}
@@ -168,7 +169,7 @@ export function SetupEditor({ initial, tradeCount = 0 }: { initial: SetupForm; t
           )}
           <div className="flex items-center gap-2">
             {error && <span className="text-sm text-loss">{error}</span>}
-            <Button variant="ghost" onClick={() => router.back()}>
+            <Button variant="ghost" onClick={() => router.push(f.id ? `/setups/${f.id}` : "/setups")}>
               Cancel
             </Button>
             <Button variant="primary" onClick={submit} disabled={pending || !f.name.trim()}>

@@ -32,7 +32,15 @@ export default async function SetupsPage() {
         }
       />
       {setups.length === 0 ? (
-        <EmptyState title="No setups yet" description="Describe each setup's rules so you can measure it." />
+        <EmptyState
+          title="No setups yet"
+          description="Describe each setup's rules so you can measure it."
+          action={
+            <LinkButton href="/setups/new" variant="primary">
+              <Plus className="h-4 w-4" /> Create your first setup
+            </LinkButton>
+          }
+        />
       ) : (
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           {[...setups]
@@ -68,7 +76,7 @@ export default async function SetupsPage() {
                     </div>
                     <div>
                       <p className="text-[11px] text-faint">Total</p>
-                      <RValue r={taken.count ? taken.totalR : null} be={0} />
+                      <RValue r={taken.totalR} be={0} />
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-[11px]">

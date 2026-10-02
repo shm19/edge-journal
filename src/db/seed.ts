@@ -157,7 +157,7 @@ const MISTAKE_TYPES: (typeof schema.mistakeTypes.$inferInsert)[] = [
   { name: "Ignored invalidation", description: "Stayed in after the idea was invalidated." },
 ];
 
-const SEED_VERSION = 4;
+export const SEED_VERSION = 4;
 
 /** Additive seed upgrades for existing databases (never re-adds things the user deleted after the upgrade). */
 function upgrade(db: DB) {

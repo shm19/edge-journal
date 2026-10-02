@@ -376,6 +376,7 @@ function TypeManager({
           {error && <p className="text-sm text-loss col-span-3">{error}</p>}
         </div>
       )}
+      {error && !editing && <p role="alert" className="mx-4 mb-3 text-sm text-loss">{error}</p>}
       <ul className="divide-y divide-line px-4 pb-2">
         {types.map((t) => (
           <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
@@ -396,7 +397,9 @@ function TypeManager({
                 onClick={() => {
                   if (!confirm(`Delete “${t.name}”?${usage[t.id] ? ` Its ${usage[t.id]} ${cfg.usedLabel} will be removed too.` : ""}`)) return;
                   start(async () => {
-                    await cfg.remove(t.id);
+                    const res = await cfg.remove(t.id);
+                    if (!res.ok) return setError(res.error);
+                    setError(null);
                     router.refresh();
                   });
                 }}

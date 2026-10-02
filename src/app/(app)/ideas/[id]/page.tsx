@@ -27,6 +27,14 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
   const { newer, older } = ideaNeighbours(idea);
   const mistakeTotal = tradeMistakeCost(idea.mistakes);
   const measured = idea.mistakes.filter((m) => m.cost != null).length;
+  // A mistake measured against an alternative that an earlier mistake already counted (see tradeMistakeCost).
+  const seenAlt = new Set<number>();
+  const sharedIds = new Set(
+    idea.mistakes.filter((m) => {
+      if (m.costR != null || m.scenarioId == null || m.cost == null) return false;
+      return seenAlt.size === seenAlt.add(m.scenarioId).size;
+    }).map((m) => m.id),
+  );
 
   const primary = idea.primary;
   const checklist = idea.setup?.checklist ?? [];
@@ -69,6 +77,9 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
             <SetupBadge setup={idea.setup} />
             <span>{fmtDateTime(idea.openedAt)}</span>
             {idea.closedAt && <span>→ {fmtDateTime(idea.closedAt)}</span>}
+            {idea.closedAt === idea.openedAt && primary?.exitPrice != null && (
+              <span className="text-xs text-faint">Closed time = opened time — set the real close time</span>
+            )}
             <span>{sessionOf(idea.openedAt)}</span>
             {idea.entryTimeframe && <Badge>{idea.entryTimeframe}</Badge>}
             {idea.htfBias && <Badge>{BIAS_LABEL[idea.htfBias]}</Badge>}
@@ -185,6 +196,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
                     {m.cost != null && (
                       <span className={cn("shrink-0 text-xs font-semibold tabular", m.cost > 0 ? "text-loss" : "text-win")}>
                         {fmtCost(m.cost)}
+                        {sharedIds.has(m.id) && <span className="font-normal text-faint"> (shared)</span>}
                       </span>
                     )}
                   </li>

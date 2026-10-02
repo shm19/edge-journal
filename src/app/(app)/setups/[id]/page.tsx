@@ -2,12 +2,13 @@ import { BarChart3, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Kpi, Markdown, RValue, SampleBadge } from "@/components/bits";
+import { BreakdownList } from "@/components/breakdown-list";
 import { EquityChart } from "@/components/charts";
 import { ComparisonTable } from "@/components/comparison-table";
 import { Gallery } from "@/components/gallery";
 import { IdeaTable } from "@/components/idea-table";
 import { Badge, Card, CardHeader, LinkButton } from "@/components/ui";
-import { fmtDate, fmtNum, fmtPct } from "@/lib/format";
+import { fmtDate, fmtPct, fmtProfitFactor } from "@/lib/format";
 import { dimensionKeys, observationStats, primaryPoints, scenarioComparisons } from "@/lib/analytics";
 import { getSetup, loadIdeas } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
@@ -89,19 +90,21 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
         <Kpi label="Taken (closed)" value={s.count} sub={<SampleBadge n={s.count} />} />
         <Kpi label="Win rate" value={fmtPct(s.winRate)} sub={`${s.wins}W · ${s.losses}L · ${s.breakevens}BE`} />
         <Kpi label="Expectancy" value={<RValue r={s.expectancy} be={0} />} />
-        <Kpi label="Total" value={<RValue r={s.count ? s.totalR : null} be={0} />} sub={`PF ${s.profitFactor == null ? (s.wins ? "∞" : "—") : fmtNum(s.profitFactor)}`} />
+        <Kpi label="Total" value={<RValue r={s.totalR} be={0} />} sub={`PF ${fmtProfitFactor(s)}`} />
         <Kpi
           label="Forward test"
           value={obs.count && !fwd.count ? `${fmtPct(obs.hitRate)} hit` : <RValue r={fwd.expectancy} be={0} />}
           sub={
-            obs.count && !fwd.count
-              ? `${obs.hits} of ${obs.count} observations`
-              : `avg · ${fmtPct(fwd.winRate)} · n=${fwd.count}${obs.count ? ` · ${obs.hits}/${obs.count} hit` : ""}`
+            !fwd.count && !obs.count
+              ? undefined
+              : obs.count && !fwd.count
+                ? `${obs.hits} of ${obs.count} observations`
+                : `avg · ${fmtPct(fwd.winRate)} · n=${fwd.count}${obs.count ? ` · ${obs.hits}/${obs.count} hit` : ""}`
           }
         />
         <Kpi
           label={backtest.count ? "Backtest" : "Skipped / missed"}
-          value={backtest.count ? <RValue r={backtest.expectancy} be={0} /> : <RValue r={skipped.count ? skipped.totalR : null} be={0} />}
+          value={backtest.count ? <RValue r={backtest.expectancy} be={0} /> : <RValue r={skipped.totalR} be={0} />}
           sub={backtest.count ? `avg · ${fmtPct(backtest.winRate)} · n=${backtest.count}` : `if taken · n=${skipped.count}`}
         />
       </div>
@@ -134,23 +137,11 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
           { dim: "timeframe", title: "By entry timeframe" },
           { dim: "bias", title: "By HTF bias" },
           { dim: "regime", title: "Range vs trend" },
-          { dim: "mistake", title: "With / without mistakes" },
+          { dim: "mistake", title: "By mistake type" },
         ].map(({ dim, title }) => (
           <Card key={dim}>
             <CardHeader title={title} />
-            <ul className="divide-y divide-line px-4 pb-2 text-sm">
-              {breakdown(dim).map((g) => (
-                <li key={g.key} className="flex items-center justify-between py-2">
-                  <span>{g.key}</span>
-                  <span className="flex items-center gap-3 text-xs tabular">
-                    <span className="text-faint">n={g.summary.count}</span>
-                    <span className="text-muted">{fmtPct(g.summary.winRate)}</span>
-                    <RValue r={g.summary.expectancy} be={0} />
-                  </span>
-                </li>
-              ))}
-              {!points.length && <li className="py-3 text-faint">No closed trades yet.</li>}
-            </ul>
+            <BreakdownList rows={breakdown(dim)} value="expectancy" empty="No closed trades yet." />
           </Card>
         ))}
       </div>

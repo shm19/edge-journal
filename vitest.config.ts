@@ -10,7 +10,7 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.{ts,tsx}"],
-    setupFiles: ["test/setup.ts"],
+    setupFiles: ["test/setup.ts", "test/setup-dom.ts"],
     coverage: {
       provider: "v8",
       include: ["src/lib/**", "src/db/seed.ts", "src/app/api/**"],

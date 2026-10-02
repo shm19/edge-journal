@@ -4,15 +4,8 @@ import path from "node:path";
 import { db, sqlite } from "@/db";
 import { attachments, ideaMistakes, ideas, ideaTags, mistakeTypes, scenarios, scenarioTypes, settings, setups, tags } from "@/db/schema";
 import { isAuthenticated } from "@/lib/auth";
+import { csvCell } from "@/lib/csv";
 import { loadIdeas } from "@/lib/queries";
-
-function csvCell(v: unknown): string {
-  if (v == null) return "";
-  let s = String(v);
-  // Neutralise spreadsheet formulas in free text (numbers are emitted as numbers).
-  if (typeof v === "string" && /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
-  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 
 export async function GET(request: Request) {
   if (!(await isAuthenticated())) return new Response("unauthorized", { status: 401 });
@@ -20,10 +13,17 @@ export async function GET(request: Request) {
   const stamp = new Date().toISOString().slice(0, 10);
 
   if (format === "db") {
-    const tmp = path.join(os.tmpdir(), `journal-backup-${Date.now()}.db`);
-    await sqlite.backup(tmp);
-    const data = await fs.readFile(tmp);
-    await fs.unlink(tmp).catch(() => {});
+    // Stage in a private (0700) temp dir with a 0600 file, never a predictable name in the shared tmpdir.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "journal-backup-"));
+    const tmp = path.join(dir, "journal.db");
+    let data: Buffer;
+    try {
+      await sqlite.backup(tmp);
+      await fs.chmod(tmp, 0o600);
+      data = await fs.readFile(tmp);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
     return new Response(new Uint8Array(data), {
       headers: {
         "content-type": "application/vnd.sqlite3",

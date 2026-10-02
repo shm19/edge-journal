@@ -1,11 +1,12 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Kpi, RValue, SampleBadge, SetupBadge } from "@/components/bits";
+import { BreakdownList } from "@/components/breakdown-list";
 import { EquityChart, RHistogram } from "@/components/charts";
 import { IdeaTable } from "@/components/idea-table";
 import { Card, CardHeader, EmptyState, LinkButton, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import { fmtCost, fmtDate, fmtNum, fmtPct, fmtR } from "@/lib/format";
+import { fmtCost, fmtDate, fmtDrawdown, fmtPct, fmtProfitFactor, fmtR } from "@/lib/format";
 import { mistakeSummary, observationStats, primaryPoints } from "@/lib/analytics";
 import { loadIdeas } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
@@ -99,6 +100,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         }
       />
 
+      {s.count === 0 && (
+        <p className="mb-3 rounded-lg border border-line bg-panel px-3 py-2 text-sm text-muted">
+          No closed taken trades {range === "all" ? "yet" : "in this range"}.{range !== "all" && " Pick a wider range to see more."}
+        </p>
+      )}
       {s.count > 0 && s.count < 20 && (
         <p className="mb-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-xs text-warn">
           Only {s.count} closed trade{s.count === 1 ? "" : "s"} — these numbers will swing a lot until you have 20+. Keep logging.
@@ -108,9 +114,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Kpi label="Closed trades" value={s.count} sub={<SampleBadge n={s.count} />} />
         <Kpi label="Win rate" value={<span title="Wins ÷ all closed trades (breakevens count as not-a-win)">{fmtPct(s.winRate)}</span>} sub={`${s.wins}W · ${s.losses}L · ${s.breakevens}BE`} />
         <Kpi label="Expectancy" value={<RValue r={s.expectancy} be={0} />} sub="avg R per trade" />
-        <Kpi label="Total" value={<RValue r={s.count ? s.totalR : null} be={0} />} sub={`best ${fmtR(s.best)} · worst ${fmtR(s.worst)}`} />
-        <Kpi label="Profit factor" value={s.profitFactor == null ? (s.wins ? "∞" : "—") : fmtNum(s.profitFactor)} sub={`avg win ${fmtR(s.avgWin)}`} />
-        <Kpi label="Max drawdown" value={s.maxDrawdown ? <span className="text-loss">-{s.maxDrawdown.toFixed(2)}R</span> : <span className="text-faint">—</span>} sub={`longest losing streak ${s.longestLossStreak}`} />
+        <Kpi label="Total" value={<RValue r={s.totalR} be={0} />} sub={`best ${fmtR(s.best)} · worst ${fmtR(s.worst)}`} />
+        <Kpi label="Profit factor" value={fmtProfitFactor(s)} sub={`avg win ${fmtR(s.avgWin)}`} />
+        <Kpi label="Max drawdown" value={<span className={s.maxDrawdown > 0 ? "text-loss" : "text-faint"}>{fmtDrawdown(s)}</span>} sub={`longest losing streak ${s.longestLossStreak}`} />
       </div>
 
       <div className="mt-5 grid grid-cols-3 gap-5">
@@ -131,33 +137,27 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <div className="mt-5 grid grid-cols-3 gap-5">
         <Card>
           <CardHeader title="Setups" description="Ranked by expectancy" action={<Link href="/analytics" className="text-xs text-accent">Analytics →</Link>} />
-          <ul className="divide-y divide-line px-4 pb-2">
-            {bySetup.slice(0, 6).map((g) => (
-              <li key={g.key} className="flex items-center justify-between gap-2 py-2 text-sm">
-                <span className="min-w-0 flex-1 overflow-hidden">
-                  {g.setup ? (
-                    <Link href={`/setups/${g.setup.id}`} className="block min-w-0 hover:text-accent">
-                      <SetupBadge setup={g.setup} />
-                    </Link>
-                  ) : (
-                    <span className="text-faint">No setup</span>
-                  )}
-                </span>
-                <span className="flex shrink-0 items-center gap-3 text-xs tabular">
-                  <span className="text-faint">n={g.summary.count}</span>
-                  <span className="text-muted">{fmtPct(g.summary.winRate)}</span>
-                  <RValue r={g.summary.expectancy} be={0} />
-                </span>
-              </li>
-            ))}
-            {!bySetup.length && <li className="py-3 text-sm text-faint">No closed trades yet.</li>}
-          </ul>
+          <BreakdownList
+            rows={bySetup.slice(0, 6).map((g) => ({
+              key: g.key,
+              summary: g.summary,
+              label: g.setup ? (
+                <Link href={`/setups/${g.setup.id}`} className="block min-w-0 hover:text-accent">
+                  <SetupBadge setup={g.setup} />
+                </Link>
+              ) : (
+                <span className="text-faint">No setup</span>
+              ),
+            }))}
+            value="expectancy"
+            empty="No closed trades in this range."
+          />
         </Card>
 
         <Card>
           <CardHeader
             title="Costliest mistakes"
-            description={mistakeRate != null ? `${fmtPct(mistakeRate)} of taken trades had a mistake · cost = R lost vs the linked alternative · per-type rows overlap, don't add them up` : "R lost per mistake type"}
+            description={mistakeRate != null ? `${fmtPct(mistakeRate)} of taken trades had a mistake · Measured against the linked alternative. Rows can share the same lost R.` : "Measured against the linked alternative. Rows can share the same lost R."}
             action={<Link href="/analytics?group=mistake" className="text-xs text-accent">Analyze →</Link>}
           />
           <ul className="divide-y divide-line px-4 pb-2">
@@ -166,8 +166,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="min-w-0 truncate">{g.name}</span>
                 <span className="flex shrink-0 items-center gap-3 text-xs tabular">
                   <span className="text-faint">×{g.count}</span>
-                  {g.costKnown < g.count && g.costKnown > 0 && <span className="text-faint">{g.costKnown} of {g.count} measured</span>}
-                  {g.costKnown ? <span className={cn("font-semibold", g.cost > 0 ? "text-loss" : "text-win")}>{fmtCost(g.cost)}</span> : <span className="text-faint" title="No cost entered or measurable yet">—</span>}
+                  {g.costKnown < g.count && <span className="text-faint">{g.costKnown} of {g.count} measured</span>}
+                  {g.costKnown ? <span className={cn("font-semibold", g.cost > 0 ? "text-loss" : "text-win")}>{fmtCost(g.cost)}</span> : <span className="text-faint" title="No cost entered or measurable yet">not measured</span>}
                 </span>
               </li>
             ))}
@@ -178,7 +178,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Card>
           <CardHeader title="At a glance" />
           <dl className="space-y-2.5 px-4 pb-4 text-sm">
-            <Row label="Last 7 days" value={<><RValue r={week.count ? week.totalR : null} be={0} /> <span className="text-faint">· {week.count} trades</span></>} />
+            <Row label="Last 7 days" value={<><RValue r={week.totalR} be={0} /> <span className="text-faint">· {week.count} trades</span></>} />
             <Row label="Open trades" value={<Link href="/ideas?status=taken&open=1" className="hover:text-accent">{open.length}</Link>} />
             <Row label="Followed plan" value={fmtPct(s.followedPlanPct)} />
             <Row
@@ -199,7 +199,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             )}
             <Row
               label="Skipped / missed"
-              value={<Link href="/analytics?tab=skips" className="hover:text-accent"><RValue r={skipped.count ? skipped.totalR : null} be={0} /> <span className="text-faint">if taken · n={skipped.count}</span></Link>}
+              value={<Link href="/analytics?tab=skips" className="hover:text-accent"><RValue r={skipped.totalR} be={0} /> <span className="text-faint">if taken · n={skipped.count}</span></Link>}
             />
           </dl>
         </Card>

@@ -36,10 +36,15 @@ src/
     settings.ts            getSettings() with defaults
     auth.ts / session.ts   Password check, JWT cookie (session.ts is edge-safe for proxy.ts)
     price.ts / tz.ts       Price parsing; APP_TIMEZONE = "UTC" + zone helpers (sessions) (shared client + server)
-    editor-shape.ts        Editor form-state types + IdeaView → form mapping (shared)
-    format.ts              Formatting + label maps
+    editor-shape.ts        Editor form-state types + IdeaView → form mapping, plus the pure editor transitions (patchScenario, setStatus,
+                           toObservation/toPriceMode, editorMistakeCost) and buildSavePayload (shared, unit-tested)
+    format.ts              Formatting + label maps (fmtR, fmtCost, fmtProfitFactor, fmtDrawdown, cached Intl formatters)
     metrics.ts             Analytics metric list (shared)
-  components/              ui.tsx primitives, bits.tsx domain bits, charts (client), editors (client), tables
+  components/              ui.tsx primitives, bits.tsx domain bits, breakdown-list.tsx (shared n / win rate / R rows), charts (client), tables
+    idea-editor.tsx        Editor shell (state, save, layout), ~270 lines
+    idea-editor/           Its cards: context-card, checklist-card, tags-card, scenario-card (ScenarioCard/PriceInput/QuickExit),
+                           notes-card, mistakes-card, screenshots-card + use-screenshot-upload (hook), date-time-field
+    type-picker.tsx, filter-bar.tsx, setup-editor.tsx, settings-forms.tsx   Other client editors
 drizzle/                   SQL migrations (committed). Applied automatically at startup.
 scripts/                   backup.sh + backtest pipeline (see docs/backtesting.md)
 ```
@@ -62,16 +67,22 @@ scripts/                   backup.sh + backtest pipeline (see docs/backtesting.m
 
 ## Auth
 - `APP_PASSWORD` (env) is compared in constant time.
-- Sessions are an HS256 JWT in the `ej_session` cookie, valid 30 days, signed with `SESSION_SECRET`, which must be 32+ characters in production.
-- Cookie flags: `Secure` in production unless `COOKIE_SECURE=false`.
-- Login throttle: 5 failures per client IP → 60 s lock, held in memory.
-- `?next=` must be a same-origin relative path.
+- Sessions are an HS256 JWT in the `ej_session` cookie, valid 30 days, signed with `SESSION_SECRET` (32+ characters). It **fails closed**: the public dev fallback secret is used only when `NODE_ENV === "development"`, otherwise signing/verifying throws.
+- Cookie flags: `Secure` in production; only an explicit `COOKIE_SECURE=false` turns it off there (`cookieSecure()` in `session.ts`). In `next dev` it is off unless `COOKIE_SECURE=true`.
+- Login throttle: 5 failures per client IP → 60 s lock, held in memory (`src/lib/login-guard.ts`, together with `safeNext`: `?next=` must be a same-origin relative path).
+- **Server actions never `redirect()`.** `actions.ts` checks `isAuthenticated()` and returns `{ ok: false, error: "Session expired, …" }` so a half-written editor isn't thrown away. Pages and layouts still use `requireAuth()` (redirect).
+- Testable helpers live outside `"use server"`/route files: `login-guard.ts`, `image-sniff.ts` (uploads), `csv.ts` (export).
+- New attachments must exist in `UPLOAD_DIR` and not belong to any other attachment; `db` exports are staged in a private `mkdtemp` dir (0600).
+- Security headers (`next.config.ts`): `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `Referrer-Policy: same-origin`, `nosniff`, no `X-Powered-By`.
+- Validation (`validation.ts`): `not_filled` clears the exit price, an exit price needs a reason, a target must be on the profit side; `firstError(err, input)` labels scenarios by `isPrimary`.
 
 ## Conventions
 - **UI:**
   - Use the tokens: `bg-panel`, `border-line`, `text-muted`, `text-faint`, `text-win`, `text-loss`, `accent`.
   - Use the primitives from `components/ui.tsx`.
-  - Empty values render "—", never 0.
+  - Empty values render "—", never 0. `Summary.totalR` is `null` for an empty sample; a real zero (e.g. max drawdown of an all-win sample) renders `0.00R`.
+  - A tag group with no tag on an idea groups under "No tag" (`NO_TAG`), not "—".
+  - Destructive actions check `res.ok` and show the error; they only navigate away on success.
 - **Numbers:**
   - Show R with a sign and two decimals (`fmtR`).
   - Use `tabular` for numeric columns.
@@ -85,6 +96,7 @@ scripts/                   backup.sh + backtest pipeline (see docs/backtesting.m
   - There is no mobile support (decided 2026-10-02). Don't add phone layouts or test at 375 px.
   - The app shell has `min-w-[1024px]`, so `sm:`/`md:`/`lg:` Tailwind prefixes are always on and must not be used; write the desktop value directly. `xl:` (1280px) is the only real breakpoint.
   - `/login` sits outside the app shell and stays responsive on purpose.
+- **Editor state:** the idea editor keeps one `EditorIdea` in state. Anything derivable is derived, not stored (`isObservationOnly` = forward test with no scenarios). Transitions that carry rules (closing time, status changes, dropping scenarios) are pure functions in `editor-shape.ts` and tested there; cards only render and call them.
 - **Lint:** React-compiler rules apply. Use `useSyncExternalStore` for browser-only values, never `setState` inside an effect, and never read refs during render.
 
 ## Deployment

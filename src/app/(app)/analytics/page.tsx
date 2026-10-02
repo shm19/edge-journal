@@ -1,17 +1,20 @@
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AnalyticsControls } from "@/components/analytics-controls";
 import { METRICS, type MetricKey } from "@/lib/metrics";
 import { RValue, SampleBadge, StatusBadge } from "@/components/bits";
+import { BreakdownList } from "@/components/breakdown-list";
 import { BarMetricChart, MultiEquityChart } from "@/components/charts";
 import { ComparisonTable } from "@/components/comparison-table";
 import { FilterBar } from "@/components/filter-bar";
-import { Card, CardHeader, PageHeader } from "@/components/ui";
-import { fmtDate, fmtNum, fmtPct, fmtR } from "@/lib/format";
+import { Card, CardHeader, EmptyState, LinkButton, PageHeader } from "@/components/ui";
+import { fmtDate, fmtDrawdown, fmtPct, fmtProfitFactor, fmtR } from "@/lib/format";
 import {
   applyFilters,
   DIMENSIONS,
   dimensionKeys,
+  NO_TAG,
   isDimension,
   parseFilters,
   primaryPoints,
@@ -48,6 +51,23 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const group = isDimension(groupRaw, groupsList) ? groupRaw : "setup";
   const setupColor = new Map(setups.map((s) => [s.name, s.color]));
   const tagColor = new Map(tags.map((t) => [t.name, t.color]));
+
+  if (!all.length) {
+    return (
+      <>
+        <PageHeader title="Analytics" description="Slice your results any way you want. Everything is in R." />
+        <EmptyState
+          title="Nothing to analyse yet"
+          description="Log a few ideas first. Analytics slices them by setup, tag, mistake, session and more."
+          action={
+            <LinkButton href="/ideas/new" variant="primary">
+              <Plus className="h-4 w-4" /> Log your first idea
+            </LinkButton>
+          }
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -118,8 +138,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                         <td className="px-3 py-2.5 text-right">
                           <RValue r={g.summary.totalR} be={0} />
                         </td>
-                        <td className="px-3 py-2.5 text-right">{g.summary.profitFactor == null ? (g.summary.wins ? "∞" : "—") : fmtNum(g.summary.profitFactor)}</td>
-                        <td className="px-3 py-2.5 text-right text-loss">{g.summary.maxDrawdown ? `-${g.summary.maxDrawdown.toFixed(2)}R` : "—"}</td>
+                        <td className="px-3 py-2.5 text-right">{fmtProfitFactor(g.summary)}</td>
+                        <td className="px-3 py-2.5 text-right text-loss">{fmtDrawdown(g.summary)}</td>
                         <td className="px-3 py-2.5 text-right text-muted">{fmtPct(g.summary.followedPlanPct)}</td>
                       </tr>
                     ))}
@@ -190,11 +210,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                   <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
                     <div>
                       <dt className="text-[11px] text-faint">Left on the table</dt>
-                      <dd className="font-semibold tabular text-win">{a.count ? `+${a.leftOnTable.toFixed(2)}R` : "—"}</dd>
+                      <dd className="font-semibold tabular text-win">{a.count ? fmtR(a.leftOnTable) : "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[11px] text-faint">Losses avoided</dt>
-                      <dd className="font-semibold tabular text-loss">{a.lossesAvoided ? `${a.lossesAvoided.toFixed(2)}R` : "—"}</dd>
+                      <dd className="font-semibold tabular text-loss">{a.count ? `${a.lossesAvoided.toFixed(2)}R` : "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[11px] text-faint">Net if taken</dt>
@@ -214,41 +234,19 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             <div className="grid grid-cols-2 gap-5">
               <Card>
                 <CardHeader title="Skipped — by reason" description={`Tag skips under “${SKIP_REASON_GROUP}”. Positive R = that reason is costing you.`} />
-                <ul className="divide-y divide-line px-4 pb-2 text-sm">
-                  {byReason.map((g) => (
-                    <li key={g.key} className="flex items-center justify-between py-2">
-                      <span>{g.key === "—" ? <span className="text-faint">No reason tag</span> : g.key}</span>
-                      <span className="flex items-center gap-3 text-xs tabular">
-                        <span className="text-faint">n={g.summary.count}</span>
-                        <span className="text-muted">{fmtPct(g.summary.winRate)}</span>
-                        <RValue r={g.summary.totalR} be={0} />
-                      </span>
-                    </li>
-                  ))}
-                  {!byReason.length && (
-                    <li className="py-3 text-faint">
-                      {groupsList.includes(SKIP_REASON_GROUP)
-                        ? "No skipped ideas with an outcome yet."
-                        : `No “${SKIP_REASON_GROUP}” tag group found. Add tags in that group in Settings to compare reasons.`}
-                    </li>
-                  )}
-                </ul>
+                <BreakdownList
+                  rows={byReason.map((g) => ({ ...g, label: g.key === NO_TAG ? <span className="text-faint">No reason tag</span> : g.key }))}
+                  value="totalR"
+                  empty={
+                    groupsList.includes(SKIP_REASON_GROUP)
+                      ? "No skipped ideas with an outcome yet."
+                      : `No “${SKIP_REASON_GROUP}” tag group found. Add tags in that group in Settings to compare reasons.`
+                  }
+                />
               </Card>
               <Card>
                 <CardHeader title="Skipped & missed — by setup" />
-                <ul className="divide-y divide-line px-4 pb-2 text-sm">
-                  {bySetup.map((g) => (
-                    <li key={g.key} className="flex items-center justify-between py-2">
-                      <span>{g.key}</span>
-                      <span className="flex items-center gap-3 text-xs tabular">
-                        <span className="text-faint">n={g.summary.count}</span>
-                        <span className="text-muted">{fmtPct(g.summary.winRate)}</span>
-                        <RValue r={g.summary.totalR} be={0} />
-                      </span>
-                    </li>
-                  ))}
-                  {!bySetup.length && <li className="py-3 text-faint">Log skipped setups with their hypothetical exit to see this.</li>}
-                </ul>
+                <BreakdownList rows={bySetup} value="totalR" empty="Log skipped setups with their hypothetical exit to see this." />
               </Card>
             </div>
             <Card>

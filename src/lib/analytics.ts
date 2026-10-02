@@ -122,14 +122,20 @@ export function rrBucket(rr: number | null | undefined): string {
   return "3+";
 }
 
+/** Group key for ideas with no tag in the grouped dimension (instead of a group literally called "—"). */
+export const NO_TAG = "No tag";
+
 export function dimensionKeys(dim: string): (p: StatPoint) => string[] {
   if (dim.startsWith("group:")) {
     const group = dim.slice(6);
-    return (p) => p.idea.tags.filter((t) => t.group === group).map((t) => t.name);
+    return (p) => {
+      const names = p.idea.tags.filter((t) => t.group === group).map((t) => t.name);
+      return names.length ? names : [NO_TAG];
+    };
   }
   switch (dim) {
     case "tag":
-      return (p) => p.idea.tags.map((t) => t.name);
+      return (p) => (p.idea.tags.length ? p.idea.tags.map((t) => t.name) : [NO_TAG]);
     case "mistake":
       return (p) => (p.idea.mistakes.length ? p.idea.mistakes.map((m) => m.name) : ["No mistake"]);
     case "symbol":

@@ -1,5 +1,5 @@
 import type { Bias, ExitReason, IdeaStatus, Regime } from "@/db/schema";
-import { APP_TIMEZONE } from "./tz";
+import { APP_TIMEZONE, cachedFormatter } from "./tz";
 
 export function fmtR(r: number | null | undefined, digits = 2): string {
   if (r == null || !Number.isFinite(r)) return "—";
@@ -10,6 +10,17 @@ export function fmtR(r: number | null | undefined, digits = 2): string {
 /** Cost of a mistake (positive = R lost) as a signed R amount: lost R is negative, "saved" R positive. */
 export function fmtCost(cost: number | null | undefined, digits = 2): string {
   return cost == null ? "—" : fmtR(-cost, digits);
+}
+
+/** Profit factor: "∞" when there are wins but no losses, "—" when there is nothing to show. */
+export function fmtProfitFactor(s: { profitFactor: number | null; wins: number }): string {
+  return s.profitFactor == null ? (s.wins ? "∞" : "—") : fmtNum(s.profitFactor);
+}
+
+/** Max drawdown as a negative R amount; a real zero (all-win sample) is "0.00R", "—" only when there are no trades. */
+export function fmtDrawdown(s: { maxDrawdown: number; count: number }): string {
+  if (!s.count) return "—";
+  return s.maxDrawdown ? `-${s.maxDrawdown.toFixed(2)}R` : "0.00R";
 }
 
 export function fmtPct(v: number | null | undefined, digits = 0): string {
@@ -33,7 +44,7 @@ export function fmtPrice(v: number | null | undefined): string {
 /** Date + time, always in UTC, with a "UTC" marker. */
 export function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const s = new Intl.DateTimeFormat("en-GB", {
+  const s = cachedFormatter("en-GB", {
     timeZone: APP_TIMEZONE,
     day: "2-digit",
     month: "short",
@@ -46,7 +57,7 @@ export function fmtDateTime(iso: string | null | undefined): string {
 
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return new Intl.DateTimeFormat("en-GB", { timeZone: APP_TIMEZONE, day: "2-digit", month: "short", year: "2-digit" }).format(new Date(iso));
+  return cachedFormatter("en-GB", { timeZone: APP_TIMEZONE, day: "2-digit", month: "short", year: "2-digit" }).format(new Date(iso));
 }
 
 export function rTone(r: number | null | undefined, be = 0.1): "win" | "loss" | "be" | "none" {

@@ -55,7 +55,7 @@ journal.example.com {
   reverse_proxy 127.0.0.1:3000
 }
 ```
-Session cookies are `Secure` in production, so serve the app over HTTPS. If you really must use plain HTTP (e.g. a private LAN), set `COOKIE_SECURE=false`.
+Session cookies are `Secure` in production, so serve the app over HTTPS. If you really must use plain HTTP (e.g. a private LAN), set `COOKIE_SECURE=false`; any other value (`0`, `no`, a typo) keeps `Secure` on. `SESSION_SECRET` (32+ chars) is required whenever `NODE_ENV` is not `development`: without it, login fails instead of falling back to a public key. Your proxy must overwrite `X-Forwarded-For` (Caddy does) because the login throttle trusts it.
 
 ### Backups
 ```bash

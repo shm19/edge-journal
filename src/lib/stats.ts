@@ -1,5 +1,5 @@
 // Pure R / statistics engine. No DB or framework imports — unit tested in stats.test.ts.
-import { zonedHour } from "./tz";
+import { cachedFormatter, zonedHour } from "./tz";
 
 export type Dir = "long" | "short";
 export type Outcome = "win" | "loss" | "be" | "open";
@@ -101,7 +101,8 @@ export interface Summary {
   avgWin: number | null;
   avgLoss: number | null;
   expectancy: number | null; // mean R
-  totalR: number;
+  /** Sum of R; null when there are no points (so an empty sample renders "—", never 0). */
+  totalR: number | null;
   profitFactor: number | null; // null = no losses yet (∞)
   maxDrawdown: number; // in R, positive number
   longestWinStreak: number;
@@ -172,7 +173,7 @@ export function summarize(points: RPoint[], beThreshold = 0.1): Summary {
     avgWin: wins ? sumWin / wins : null,
     avgLoss: losses ? sumLoss / losses : null,
     expectancy: count ? total / count : null,
-    totalR: total,
+    totalR: count ? total : null,
     profitFactor: losses ? sumWin / Math.abs(sumLoss) : null,
     maxDrawdown: maxDd,
     longestWinStreak: bestWin,
@@ -249,7 +250,7 @@ export function compareScenarios(pairs: ComparisonPair[], beThreshold = 0.1): Co
     pairs: pairs.length,
     primary,
     variant,
-    deltaTotalR: variant.totalR - primary.totalR,
+    deltaTotalR: (variant.totalR ?? 0) - (primary.totalR ?? 0),
     deltaExpectancy: sub(variant.expectancy, primary.expectancy),
     deltaWinRate: sub(variant.winRate, primary.winRate),
     variantBetterCount: pairs.filter((p) => p.variantR > p.primaryR).length,
@@ -304,11 +305,11 @@ export function sessionOf(iso: string): string {
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function weekdayOf(iso: string, timeZone = "UTC"): string {
-  return new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone }).format(new Date(iso));
+  return cachedFormatter("en-US", { weekday: "short", timeZone }).format(new Date(iso));
 }
 
 export function monthOf(iso: string, timeZone = "UTC"): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", timeZone }).formatToParts(new Date(iso));
+  const parts = cachedFormatter("en-CA", { year: "numeric", month: "2-digit", timeZone }).formatToParts(new Date(iso));
   const y = parts.find((p) => p.type === "year")?.value;
   const m = parts.find((p) => p.type === "month")?.value;
   return `${y}-${m}`;

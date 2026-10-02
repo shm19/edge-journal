@@ -38,7 +38,7 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | Command | Purpose |
 |---|---|
 | `npm run dev` | Dev server (or `preview_start edge-journal-dev`, configured in `../.claude/launch.json`, on port 3100 with data in `.data-dev`) |
-| `npm test` | Vitest: `src/lib/*.test.ts` (R math, stats, analytics, status buckets, price parsing, timezones) plus DB-backed tests (`queries.test.ts`, `actions.test.ts`; `test/db.ts` gives each a temp DB, `test/fixtures.ts` builds `IdeaView`s without one) |
+| `npm test` | Vitest (component tests use React Testing Library with `// @vitest-environment jsdom`; `test/setup-dom.ts` adds the matchers): `src/lib/*.test.ts` (R math, stats, analytics, status buckets, price parsing, timezones) plus DB-backed tests (`queries.test.ts`, `actions.test.ts`, `actions-guards.test.ts`, `seed.test.ts`, `app/api/routes.test.ts`; `SESSION_SECRET` is set in `test/setup.ts`; `test/db.ts` gives each a temp DB, `test/fixtures.ts` builds `IdeaView`s without one) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint. React-compiler rules are on: no `setState` in effects, no ref reads during render |
 | `npm run build` | Production build (standalone output) |
@@ -82,8 +82,10 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 ## Where to change things
 | Task | Files |
 |---|---|
-| New field on ideas or scenarios | `src/db/schema.ts` → migration → `src/lib/validation.ts` → `src/lib/actions.ts` (`saveIdea`) → `src/lib/editor-shape.ts` → `src/components/idea-editor.tsx` → `src/app/(app)/ideas/[id]/page.tsx` → CSV in `src/app/api/export/route.ts` |
-| Mistakes | `mistakeTypes` / `ideaMistakes` (`schema.ts`), `MistakeView` (`queries.ts`), `mistakeSummary()` (`analytics.ts`), cost rules `mistakeCost()` / `tradeMistakeCost()` (`stats.ts`, see data-model.md), the Mistakes card in `idea-editor.tsx`, `TypeManager kind="mistake"` (`settings-forms.tsx`) |
+| New field on ideas or scenarios | `src/db/schema.ts` → migration → `src/lib/validation.ts` → `src/lib/actions.ts` (`saveIdea`) → `src/lib/editor-shape.ts` → `src/components/idea-editor.tsx` (shell) and the matching card in `src/components/idea-editor/` → `src/app/(app)/ideas/[id]/page.tsx` → CSV in `src/app/api/export/route.ts` |
+| Mistakes | `mistakeTypes` / `ideaMistakes` (`schema.ts`), `MistakeView` (`queries.ts`), `mistakeSummary()` (`analytics.ts`), cost rules `mistakeCost()` / `tradeMistakeCost()` (`stats.ts`, see data-model.md), the Mistakes card (`components/idea-editor/mistakes-card.tsx`; cost shown by `editorMistakeCost` in `editor-shape.ts`), `TypeManager kind="mistake"` (`settings-forms.tsx`) |
+| Idea editor behaviour (closing time, status switch, Hit/Miss, save payload) | Pure rules + `buildSavePayload` in `src/lib/editor-shape.ts` (test in `editor-shape.test.ts`); rendering in `src/components/idea-editor.tsx` and `src/components/idea-editor/*` |
+| A repeated "name · n · win rate · R" list | `src/components/breakdown-list.tsx`; number formats (`fmtProfitFactor`, `fmtDrawdown`) in `src/lib/format.ts` |
 | "Pick or create a type" UI (alternatives, mistakes) | `src/components/type-picker.tsx` |
 | New analytics "group by" | `DIMENSIONS` + `dimensionKeys()` in `src/lib/analytics.ts` (pure; add a case to `analytics.test.ts`) |
 | A new DB read for a page | A function in `src/lib/queries.ts` (server-only). Pages must not import `@/db`. Pure filtering/grouping goes in `src/lib/analytics.ts`. |

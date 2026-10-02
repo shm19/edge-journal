@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useTempDb as freshDb } from "../../test/db"; // aliased: the react-hooks lint rule mistakes "use*" for a hook
+import { tempDb } from "../../test/db";
 
-vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn(async () => {}) }));
+vi.mock("@/lib/auth", () => ({ isAuthenticated: vi.fn(async () => true) }));
 
 type Scen = {
   id?: number;
@@ -47,7 +47,7 @@ const idea = (o: Record<string, unknown> = {}) => ({
 });
 
 async function load() {
-  await freshDb();
+  await tempDb();
   const actions = await import("@/lib/actions");
   const { db } = await import("@/db");
   const schema = await import("@/db/schema");

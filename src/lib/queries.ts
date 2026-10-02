@@ -106,13 +106,11 @@ export function loadIdeas(where?: { id?: number }): IdeaView[] {
   const setupById = new Map(db.select().from(setups).all().map((s) => [s.id, s]));
   const tagById = new Map(db.select().from(tags).all().map((t) => [t.id, t]));
   const typeById = new Map(db.select().from(scenarioTypes).all().map((t) => [t.id, t]));
-  const ids = new Set(ideaRows.map((i) => i.id));
   // Child tables: when loading a single idea, filter in SQL instead of scanning the whole table.
   const only = (col: Parameters<typeof eq>[0]) => (where?.id != null ? eq(col, where.id) : undefined);
 
   const tagsByIdea = new Map<number, Tag[]>();
   for (const it of db.select().from(ideaTags).where(only(ideaTags.ideaId)).all()) {
-    if (!ids.has(it.ideaId)) continue;
     const t = tagById.get(it.tagId);
     if (!t) continue;
     const list = tagsByIdea.get(it.ideaId) ?? [];
@@ -140,7 +138,6 @@ export function loadIdeas(where?: { id?: number }): IdeaView[] {
 
   const attByIdea = new Map<number, Attachment[]>();
   for (const a of db.select().from(attachments).where(only(attachments.ideaId)).orderBy(asc(attachments.id)).all()) {
-    if (!ids.has(a.ideaId)) continue;
     const list = attByIdea.get(a.ideaId) ?? [];
     list.push(a);
     attByIdea.set(a.ideaId, list);
@@ -149,7 +146,6 @@ export function loadIdeas(where?: { id?: number }): IdeaView[] {
   const mistakeTypeById = new Map(db.select().from(mistakeTypes).all().map((t) => [t.id, t]));
   const mistakesByIdea = new Map<number, (typeof ideaMistakes.$inferSelect)[]>();
   for (const m of db.select().from(ideaMistakes).where(only(ideaMistakes.ideaId)).orderBy(asc(ideaMistakes.id)).all()) {
-    if (!ids.has(m.ideaId)) continue;
     const list = mistakesByIdea.get(m.ideaId) ?? [];
     list.push(m);
     mistakesByIdea.set(m.ideaId, list);

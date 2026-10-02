@@ -50,6 +50,8 @@ His explicit asks: log trades with reasons, setups, coin, time and narrative; te
 - **Sample-size honesty.** Show `n` everywhere, show a warning below 20 trades, and label the confidence as "too few", "early" or "solid".
 - **Desktop only.** No mobile support; the app is used on a desktop browser.
 - **UTC only.** Every time is stored, entered and shown in UTC (`APP_TIMEZONE` in `src/lib/tz.ts`). It isn't configurable: there's no setting and no banner. Weekday and month buckets use UTC. Sessions still use the local hours of London, New York and Tokyo, adjusted for daylight saving.
+- **Closing time is never stamped with "now".** Entering an exit on the primary scenario fills a blank "Closed" time with the open time (shown with a hint so he can adjust it); "Now" is a button only, and "Still open" removes a time the editor filled in (never one he typed). Journal entries are mostly written after the fact, and a wrong close time shifts every date-based stat.
+- **Hit / Miss vs prices (forward tests).** Switching to Hit / Miss drops the idea's scenarios, so it asks first when any has prices. Switching the status away from Forward test while in Hit / Miss brings back an empty primary scenario.
 - **Prices are typed by hand,** so the parser accepts `64,250`, `1.234,5` and `0,5`, and the editor echoes the parsed value.
 - **Manual entry first.** There is no exchange sync. Journaling by hand is part of the learning process. Backtests import through scripts.
 

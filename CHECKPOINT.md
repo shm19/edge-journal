@@ -90,7 +90,7 @@ Every step must also pass the usual checks: `npm test`, `typecheck`, `lint`, `bu
 
 **After Step 3b:** coverage must not drop below the thresholds.
 
-**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → 3 → 3b → 4 → 5 → 6 → 7. (Step 0 is done.)
+**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → 3b → 5 → 6 → 7. (Step 0 is done.)
 
 **Process for every step and change:** follow [docs/workflow.md](docs/workflow.md).
 1. Scope.
@@ -379,7 +379,7 @@ Add `npm run e2e`.
 - The coverage report is linked in this file.
 - Coverage gaps that are hard to reach are listed with a reason.
 
-### ☐ Step 4: Cleanup from the review (in progress; started before Step 3b at Shayan's request)
+### ☑ Step 4: Cleanup from the review (done 2026-10-03; run before Step 3b at Shayan's request)
 **Order change (Shayan, 2026-10-02):** Step 4 runs now, with its tests written as part of each fix; Step 3b (the rest of the coverage targets and Playwright) follows. Test tooling is already installed (vitest config, `test/db.ts` temp-DB helper, RTL, jsdom, coverage-v8, Playwright).
 
 **Triage of docs/review-2026-10-02.md** (Shayan said to apply the review):
@@ -391,6 +391,25 @@ Add `npm run e2e`.
   - Closing a trade no longer stamps `closedAt = now`; it defaults to the opened time.
 - **Defer (Backlog):** P1-7 and the e2e run (Step 3b), P2-5 (comment only, done inline), P2-8 warnings, P2-11 checklist keyed by text, P2-12 one date concept, P2-13 mixed-status badge, P2-15 journal paging, login-throttle redesign, session versioning, markdown image policy, `__Host-` cookie, read-path auth asserts, upload streaming cap.
 
+
+**Workflow checklist:**
+- [x] 1 Scope: the triage above.
+- [x] 2 Built with Shayan's lazy-developer skill in three work packages (data layer; auth/actions/routes; UI and editor split).
+- [x] 3a Code review: no P0; 1 P1, 11 P2.
+- [x] 3b Product review (code only, the reviewer could not log in): no P0; 4 P1, 8 P2.
+- [x] 4 Triage (below), fixes applied.
+- [x] 5 typecheck, lint, 283 tests (41 before) and build green. The e2e run is still Step 3b.
+- [x] 6 Docs: AGENTS, architecture, data-model, product, README, `.env.example`, CHANGELOG.
+- [x] 7 Browser (dashboard, trade page, editor, analytics skips): renders correctly, signed mistake costs and "not measured" rows show. Not clicked: saving, the Hit/Miss confirm, the `(shared)` / closed-time hints.
+- [x] 8 Committed (see `git log`).
+
+**What was done:** every item in the Step 4 triage above (P0-1, P0-2, P1-1 to P1-5, P1-8 to P1-12, plus the cheap P2s). Highlights: mistake cost is signed and overlap-aware; indexes (migration `0003`, restart the dev server after applying); `queries.ts` split from the pure `analytics.ts`; one `status.ts`; the editor shell went from 1107 to 268 lines; fail-closed session secret; security headers; a missing close time defaults to the open time.
+
+**Review triage (second round):**
+- **Applied:** missing-`SESSION_SECRET` login error; spurious dirty flag; `closedAtAuto` restored on load; numeric fields in the editor (risk %, fees, P&L) no longer silently discarded; one cost notation in the editor and on pages; cost-sign hint; shortened dashboard copy and "not measured" rows; "(shared)" tag on overlapping mistakes; closed-time hint on the trade page; client/server error labels; the Hit/Miss confirm names what is removed; red drawdown only when above 0; dead code; test helper renamed to `tempDb`; brittle test assertions; CHANGELOG and data-model tidy.
+- **Deferred (Backlog):** the "No tag" row can't be filtered yet; login throttle uses the leftmost `X-Forwarded-For` (README says the proxy must overwrite it); escalating locks, session versioning and read-path auth asserts; P2-8, P2-11, P2-12, P2-13, P2-15.
+- **Checked:** the 12 imported backtest trades all pass the new validation rules.
+- **Notes for Shayan:** switching to Hit/Miss now really deletes the scenarios (after a confirm). Old ideas with a wrong-side target can't be re-saved until fixed.
 
 **Original plan:**
 - Triage the review with Shayan, then do the agreed P0/P1 items.
@@ -459,6 +478,10 @@ Add `npm run e2e`.
 - **Done when:** the numbers match a hand calculation on a known set (e.g. +2R, −1R, +3R at 1% on $1,000, both modes); it works with filters; it's linked from the dashboard and setup pages.
 
 ## Backlog (not scheduled)
+- Filter by "No tag" in the filter bar (the analytics "No tag" rows have no matching filter).
+- Login throttle: take the rightmost `X-Forwarded-For`, escalating locks, size cap; session versioning for logout-everywhere; auth assert in `loadIdeas`.
+- Deferred review items: P2-8 (warnings for dropped setup/type), P2-11 (checklist keyed by text), P2-12 (one date concept), P2-13 (mixed-status badge), P2-15 (journal paging).
+- Delete the empty `src/components/ui/` directory if it still exists.
 - The journal table clips its last columns (Entry / R:R / R / Alts) at a 1024 px window because the wrapper is `overflow-hidden`. Consider `overflow-x-auto` or fewer columns (from the Step 2b browser check).
 - Show an error if deleting an idea fails. Right now `idea-actions.tsx` always redirects (from the Step 2 product review).
 - **Git tooling** (from the Step 0 review):

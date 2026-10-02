@@ -39,34 +39,36 @@ export const setups = sqliteTable("setups", {
   ...timestamps,
 });
 
-export const ideas = sqliteTable("ideas", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  symbol: text("symbol").notNull(),
-  direction: text("direction", { enum: DIRECTIONS }).notNull(),
-  status: text("status", { enum: IDEA_STATUSES }).notNull().default("taken"),
-  setupId: integer("setup_id").references(() => setups.id, { onDelete: "set null" }),
-  entryTimeframe: text("entry_timeframe"),
-  htfBias: text("htf_bias", { enum: BIASES }),
-  regime: text("regime", { enum: REGIMES }),
-  openedAt: text("opened_at").notNull(),
-  closedAt: text("closed_at"),
-  thesis: text("thesis").notNull().default(""),
-  invalidation: text("invalidation").notNull().default(""),
-  skipReason: text("skip_reason").notNull().default(""),
-  review: text("review").notNull().default(""),
-  followedPlan: integer("followed_plan", { mode: "boolean" }),
-  riskPct: real("risk_pct"),
-  feesUsd: real("fees_usd"),
-  pnlUsd: real("pnl_usd"),
-  checklistState: text("checklist_state", { mode: "json" })
-    .$type<Record<string, boolean>>()
-    .notNull()
-    .default(sql`'{}'`),
-  confidence: integer("confidence"),
-  /** Yes/no result for observation-only forward tests (no prices), e.g. "weekly open revisited". */
-  outcome: text("outcome", { enum: OUTCOMES }),
-  ...timestamps,
-},
+export const ideas = sqliteTable(
+  "ideas",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    symbol: text("symbol").notNull(),
+    direction: text("direction", { enum: DIRECTIONS }).notNull(),
+    status: text("status", { enum: IDEA_STATUSES }).notNull().default("taken"),
+    setupId: integer("setup_id").references(() => setups.id, { onDelete: "set null" }),
+    entryTimeframe: text("entry_timeframe"),
+    htfBias: text("htf_bias", { enum: BIASES }),
+    regime: text("regime", { enum: REGIMES }),
+    openedAt: text("opened_at").notNull(),
+    closedAt: text("closed_at"),
+    thesis: text("thesis").notNull().default(""),
+    invalidation: text("invalidation").notNull().default(""),
+    skipReason: text("skip_reason").notNull().default(""),
+    review: text("review").notNull().default(""),
+    followedPlan: integer("followed_plan", { mode: "boolean" }),
+    riskPct: real("risk_pct"),
+    feesUsd: real("fees_usd"),
+    pnlUsd: real("pnl_usd"),
+    checklistState: text("checklist_state", { mode: "json" })
+      .$type<Record<string, boolean>>()
+      .notNull()
+      .default(sql`'{}'`),
+    confidence: integer("confidence"),
+    /** Yes/no result for observation-only forward tests (no prices), e.g. "weekly open revisited". */
+    outcome: text("outcome", { enum: OUTCOMES }),
+    ...timestamps,
+  },
   (t) => [index("ideas_setup_idx").on(t.setupId)],
 );
 
@@ -76,20 +78,22 @@ export const scenarioTypes = sqliteTable("scenario_types", {
   description: text("description").notNull().default(""),
 });
 
-export const scenarios = sqliteTable("scenarios", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  ideaId: integer("idea_id")
-    .notNull()
-    .references(() => ideas.id, { onDelete: "cascade" }),
-  scenarioTypeId: integer("scenario_type_id").references(() => scenarioTypes.id, { onDelete: "set null" }),
-  isPrimary: integer("is_primary", { mode: "boolean" }).notNull().default(false),
-  entry: real("entry").notNull(),
-  stop: real("stop").notNull(),
-  target: real("target"),
-  exitPrice: real("exit_price"),
-  exitReason: text("exit_reason", { enum: EXIT_REASONS }),
-  notes: text("notes").notNull().default(""),
-},
+export const scenarios = sqliteTable(
+  "scenarios",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ideaId: integer("idea_id")
+      .notNull()
+      .references(() => ideas.id, { onDelete: "cascade" }),
+    scenarioTypeId: integer("scenario_type_id").references(() => scenarioTypes.id, { onDelete: "set null" }),
+    isPrimary: integer("is_primary", { mode: "boolean" }).notNull().default(false),
+    entry: real("entry").notNull(),
+    stop: real("stop").notNull(),
+    target: real("target"),
+    exitPrice: real("exit_price"),
+    exitReason: text("exit_reason", { enum: EXIT_REASONS }),
+    notes: text("notes").notNull().default(""),
+  },
   (t) => [index("scenarios_idea_idx").on(t.ideaId), index("scenarios_type_idx").on(t.scenarioTypeId)],
 );
 
@@ -101,18 +105,20 @@ export const mistakeTypes = sqliteTable("mistake_types", {
 });
 
 /** A mistake made on an idea. Cost = costR if set, else (linked alternative R − primary R). */
-export const ideaMistakes = sqliteTable("idea_mistakes", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  ideaId: integer("idea_id")
-    .notNull()
-    .references(() => ideas.id, { onDelete: "cascade" }),
-  mistakeTypeId: integer("mistake_type_id")
-    .notNull()
-    .references(() => mistakeTypes.id, { onDelete: "cascade" }),
-  note: text("note").notNull().default(""),
-  costR: real("cost_r"),
-  scenarioId: integer("scenario_id").references(() => scenarios.id, { onDelete: "set null" }),
-},
+export const ideaMistakes = sqliteTable(
+  "idea_mistakes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ideaId: integer("idea_id")
+      .notNull()
+      .references(() => ideas.id, { onDelete: "cascade" }),
+    mistakeTypeId: integer("mistake_type_id")
+      .notNull()
+      .references(() => mistakeTypes.id, { onDelete: "cascade" }),
+    note: text("note").notNull().default(""),
+    costR: real("cost_r"),
+    scenarioId: integer("scenario_id").references(() => scenarios.id, { onDelete: "set null" }),
+  },
   (t) => [
     index("idea_mistakes_idea_idx").on(t.ideaId),
     index("idea_mistakes_type_idx").on(t.mistakeTypeId),
@@ -141,16 +147,18 @@ export const ideaTags = sqliteTable(
   (t) => [primaryKey({ columns: [t.ideaId, t.tagId] }), index("idea_tags_tag_idx").on(t.tagId)],
 );
 
-export const attachments = sqliteTable("attachments", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  ideaId: integer("idea_id")
-    .notNull()
-    .references(() => ideas.id, { onDelete: "cascade" }),
-  filePath: text("file_path").notNull(),
-  caption: text("caption").notNull().default(""),
-  kind: text("kind", { enum: ATTACHMENT_KINDS }).notNull().default("before"),
-  createdAt: text("created_at").notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
-},
+export const attachments = sqliteTable(
+  "attachments",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ideaId: integer("idea_id")
+      .notNull()
+      .references(() => ideas.id, { onDelete: "cascade" }),
+    filePath: text("file_path").notNull(),
+    caption: text("caption").notNull().default(""),
+    kind: text("kind", { enum: ATTACHMENT_KINDS }).notNull().default("before"),
+    createdAt: text("created_at").notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
   (t) => [index("attachments_idea_idx").on(t.ideaId)],
 );
 

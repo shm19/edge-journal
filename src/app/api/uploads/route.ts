@@ -4,17 +4,9 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { UPLOAD_DIR } from "@/db";
 import { isAuthenticated } from "@/lib/auth";
+import { sniff } from "@/lib/image-sniff";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-
-/** Detect the real image type from magic bytes (never trust the client's MIME type). */
-function sniff(buf: Buffer): string | null {
-  if (buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
-  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpg";
-  if (buf.length >= 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") return "webp";
-  if (buf.length >= 6 && /^GIF8[79]a$/.test(buf.toString("ascii", 0, 6))) return "gif";
-  return null;
-}
 
 const err = (error: string, status: number) => NextResponse.json({ error }, { status });
 

@@ -6,9 +6,9 @@ import { vi } from "vitest";
 /**
  * Point the app at a fresh, migrated and seeded SQLite DB in a temp dir.
  * Call BEFORE importing anything from "@/db" (the connection is opened lazily on first use),
- * then dynamically import what you need:  `await useTempDb(); const { db } = await import("@/db");`
+ * then dynamically import what you need:  `await tempDb(); const { db } = await import("@/db");`
  */
-export async function useTempDb() {
+export async function tempDb() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ej-test-"));
   process.env.DATA_DIR = dir;
   vi.resetModules();

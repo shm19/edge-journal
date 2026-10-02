@@ -3,8 +3,21 @@
 
 export const APP_TIMEZONE = "UTC";
 
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+/** `Intl.DateTimeFormat` is expensive to construct: build one per locale + options and reuse it. */
+export function cachedFormatter(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const k = `${locale}|${JSON.stringify(options)}`;
+  let f = formatters.get(k);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, options);
+    formatters.set(k, f);
+  }
+  return f;
+}
+
 function parts(date: Date, timeZone: string) {
-  const p = new Intl.DateTimeFormat("en-CA", {
+  const p = cachedFormatter("en-CA", {
     timeZone,
     hourCycle: "h23",
     year: "numeric",

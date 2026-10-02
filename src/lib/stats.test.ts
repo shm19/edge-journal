@@ -61,7 +61,8 @@ describe("summarize", () => {
     expect(s.count).toBe(0);
     expect(s.winRate).toBeNull();
     expect(s.expectancy).toBeNull();
-    expect(s.totalR).toBe(0);
+    expect(s.totalR).toBeNull(); // empty renders "—", never 0
+    expect(summarize(pts([0])).totalR).toBe(0); // a real zero total stays 0
   });
 
   it("computes core metrics", () => {

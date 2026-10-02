@@ -5,6 +5,7 @@ import {
   DIMENSIONS,
   dimensionKeys,
   isDimension,
+  NO_TAG,
   mistakeSummary,
   observationStats,
   parseFilters,
@@ -99,8 +100,9 @@ describe("dimensionKeys", () => {
     const idea = makeIdea({ tags: [makeTag({ name: "Naked", group: "Level" }), makeTag({ name: "Hammer", group: "Candle" })] });
     expect(keys("tag", idea)).toEqual(["Naked", "Hammer"]);
     expect(keys("group:Level", idea)).toEqual(["Naked"]);
-    expect(keys("group:Missing", idea)).toEqual([]);
-    expect(keys("tag")).toEqual([]);
+    // An idea with nothing in the group lands in "No tag", not in a group literally called "—".
+    expect(keys("group:Missing", idea)).toEqual([NO_TAG]);
+    expect(keys("tag")).toEqual([NO_TAG]);
   });
   it("mistake", () => {
     expect(keys("mistake")).toEqual(["No mistake"]);
