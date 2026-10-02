@@ -6,6 +6,7 @@ All notable changes are recorded here, following [Keep a Changelog](https://keep
 
 ## [Unreleased]
 ### Removed
+- Mobile support: the bottom nav bar, the mobile card list in the journal, the editor's mobile reordering and all `sm:`/`md:`/`lg:` responsive fallbacks. The app shell now has a 1024 px minimum width.
 - The "Duplicate" button on the trade page and its server action.
 
 ## [0.1.0] - 2026-10-02

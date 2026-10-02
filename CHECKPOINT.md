@@ -90,7 +90,7 @@ Every step must also pass the usual checks: `npm test`, `typecheck`, `lint`, `bu
 
 **After Step 3b:** coverage must not drop below the thresholds.
 
-**Recommended order:** ~~0~~ → ~~2~~ → 2b → 3 → 3b → 4 → 5 → 6 → 7. (Step 0 is done.)
+**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → 3 → 3b → 4 → 5 → 6 → 7. (Step 0 is done.)
 
 **Process for every step and change:** follow [docs/workflow.md](docs/workflow.md).
 1. Scope.
@@ -254,7 +254,26 @@ Reason: all times should be UTC. There should be no setting and no banner.
   - its mention in the docs.
 - **Done when:** grep finds no `duplicate` references in the idea flow; the trade page shows only Edit and Delete.
 
-### ☐ Step 2b: Remove mobile support (desktop only)
+### ☑ Step 2b: Remove mobile support (desktop only) (done 2026-10-02)
+**Workflow checklist:**
+- [x] 1 Scope (below)
+- [x] 2 Built with Shayan's lazy-developer skill. Rung 1, delete: net about -70 lines. Responsive prefixes collapsed to their desktop values, `xl:` kept.
+- [x] 3a Code review: no P0.
+- [x] 3b Product review: no P0 (diff-only; the reviewer could not log in).
+- [x] 4 Triage (below)
+- [x] 5 Typecheck, lint, 41 tests and build green. No new tests: the change is CSS classes and deleted markup, and the e2e smoke test comes in Step 3b.
+- [x] 6 Docs: AGENTS, architecture, README, CHANGELOG.
+- [x] 7 Browser at 1024 px: editor (two columns, sticky save bar), journal, dashboard; no console errors.
+- [x] 8 Committed.
+
+**What was done:** deleted the mobile bottom bar and `MobileItem`, the journal's mobile card list and the editor's `contents`/`order-*` reordering. The sidebar is always shown. The app shell has `min-w-[1024px]`, so `sm:`/`md:`/`lg:` are always on and were collapsed to unconditional classes; `xl:` is kept. `/login` stays responsive.
+
+**Review triage:**
+- Applied: stale docs, empty `className=""` leftovers, class order normalised (`grid grid-cols-* gap-*`), a `/login` note in architecture.md.
+- Rejected: restoring `lg:` fallbacks for windows under 1024 px. The plan asks for a minimum page width, and the app is desktop only.
+- Deferred: the journal table's right-hand columns are clipped at exactly 1024 px (the `overflow-hidden` wrapper). This was already the case before; see Backlog.
+
+**Original plan:**
 Reason: Shayan uses the app on desktop only. Removing the mobile code simplifies everything after this step.
 - **`src/components/nav.tsx`:**
   - Delete the mobile bottom bar and the `MobileItem` component.
@@ -421,6 +440,7 @@ Add `npm run e2e`.
 - **Done when:** the numbers match a hand calculation on a known set (e.g. +2R, −1R, +3R at 1% on $1,000, both modes); it works with filters; it's linked from the dashboard and setup pages.
 
 ## Backlog (not scheduled)
+- The journal table clips its last columns (Entry / R:R / R / Alts) at a 1024 px window because the wrapper is `overflow-hidden`. Consider `overflow-x-auto` or fewer columns (from the Step 2b browser check).
 - Show an error if deleting an idea fails. Right now `idea-actions.tsx` always redirects (from the Step 2 product review).
 - **Git tooling** (from the Step 0 review):
   - a `.githooks/pre-commit` blocking staged `.env*` and `*.db*` (or `gitleaks`);

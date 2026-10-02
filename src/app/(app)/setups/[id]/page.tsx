@@ -83,7 +83,7 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-6 gap-3">
         <Kpi label="Taken (closed)" value={s.count} sub={<SampleBadge n={s.count} />} />
         <Kpi label="Win rate" value={fmtPct(s.winRate)} sub={`${s.wins}W · ${s.losses}L · ${s.breakevens}BE`} />
         <Kpi label="Expectancy" value={<RValue r={s.expectancy} be={0} />} />
@@ -104,7 +104,7 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
         />
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="mt-5 grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-5">
         <Card>
           <CardHeader title="Equity curve (R)" description={`Cumulative R of ${curveSource.label}`} />
           <div className="px-2 pb-3">
@@ -127,7 +127,7 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
         </Card>
       </div>
 
-      <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-5 xl:grid-cols-4">
         {[
           { dim: "timeframe", title: "By entry timeframe" },
           { dim: "bias", title: "By HTF bias" },
@@ -162,7 +162,7 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
         <Card className="mt-5">
           <CardHeader title="Chartbook" description="Every screenshot logged with this setup" />
           <div className="px-4 pb-4">
-            <Gallery images={images} columns="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" />
+            <Gallery images={images} columns="grid-cols-4" />
           </div>
         </Card>
       )}

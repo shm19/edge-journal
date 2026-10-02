@@ -263,7 +263,7 @@ export function IdeaEditor({
 
   return (
     <div
-      className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]"
+      className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-5"
       onDragOver={(e) => {
         if ([...e.dataTransfer.types].includes("Files")) {
           e.preventDefault();
@@ -278,10 +278,9 @@ export function IdeaEditor({
         void upload([...e.dataTransfer.files]);
       }}
     >
-      {/* On mobile both columns dissolve (display: contents) so `order-*` puts prices right after the basics. */}
       {/* ---------- Left column: context ---------- */}
-      <div className="contents lg:block lg:space-y-5">
-        <Card className="order-1 p-4">
+      <div className="space-y-5">
+        <Card className="p-4">
           <div className="grid gap-4">
             <Field label="Status">
               <Segmented
@@ -370,7 +369,7 @@ export function IdeaEditor({
                 })}
               </Select>
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               <DateTimeField
                 id="idea-opened"
                 label="Opened (UTC)"
@@ -426,7 +425,7 @@ export function IdeaEditor({
         </Card>
 
         {checklist.length > 0 && (
-          <Card className="order-5">
+          <Card>
             <CardHeader
               title="Setup checklist"
               description={setup?.name}
@@ -464,7 +463,7 @@ export function IdeaEditor({
           </Card>
         )}
 
-        <Card className="order-6">
+        <Card>
           <CardHeader title="Tags" description="Context, level, candle, mistakes, skip reasons — anything you want to slice stats by." />
           <div className="space-y-3 px-4 pb-4">
             {tagGroups.map(([group, list]) => (
@@ -498,8 +497,8 @@ export function IdeaEditor({
       </div>
 
       {/* ---------- Right column: scenarios, notes, screenshots ---------- */}
-      <div className="contents lg:block lg:space-y-5">
-        <Card className="order-2">
+      <div className="space-y-5">
+        <Card>
           <CardHeader
             title={isForward && observationOnly ? "Observation" : "Scenarios"}
             description={
@@ -582,7 +581,7 @@ export function IdeaEditor({
           </div>
         </Card>
 
-        <Card className="order-3 p-4">
+        <Card className="p-4">
           <div className="grid gap-4">
             {isSkip && (
               <Field
@@ -614,7 +613,7 @@ export function IdeaEditor({
             <Field label="Review (after)" hint="What happened? What would you do differently?" htmlFor="idea-review">
               <Textarea id="idea-review" value={idea.review} onChange={(e) => set("review", e.target.value)} className="min-h-24" />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4">
               {isTaken && (
                 <Field label="Followed my plan?">
                   <Segmented
@@ -669,7 +668,7 @@ export function IdeaEditor({
           </div>
         </Card>
 
-        <Card className="order-4">
+        <Card>
           <CardHeader
             title="Mistakes"
             description="What went wrong? Link a mistake to an alternative to measure what it cost you."
@@ -757,7 +756,7 @@ export function IdeaEditor({
           </div>
         </Card>
 
-        <Card className={cn("order-7", dragOver && "border-accent ring-2 ring-accent/30")}>
+        <Card className={cn(dragOver && "border-accent ring-2 ring-accent/30")}>
           <CardHeader
             title="Screenshots"
             description="Paste (⌘V), drag & drop, or browse. Before / during / after."
@@ -778,7 +777,7 @@ export function IdeaEditor({
               e.target.value = "";
             }}
           />
-          <div className="grid grid-cols-2 gap-3 px-4 pb-4 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3 px-4 pb-4">
             {idea.attachments.map((a) => (
               <div key={a.key} className="overflow-hidden rounded-lg border border-line bg-panel-2">
                 <div className="relative aspect-video bg-black/40">
@@ -838,14 +837,14 @@ export function IdeaEditor({
           </div>
         </Card>
 
-        <div className="sticky bottom-20 z-30 order-8 flex items-center justify-between gap-3 rounded-xl border border-line bg-panel/95 px-4 py-3 backdrop-blur md:bottom-4">
+        <div className="sticky bottom-4 z-30 flex items-center justify-between gap-3 rounded-xl border border-line bg-panel/95 px-4 py-3 backdrop-blur">
           <div className="min-w-0 text-sm">
             {error ? (
               <span className="flex items-center gap-1.5 text-loss" role="alert">
                 <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
               </span>
             ) : (
-              <span className="hidden text-faint md:inline">
+              <span className="text-faint">
                 <kbd className="rounded border border-line px-1 text-[10px]">⌘</kbd>
                 <kbd className="ml-0.5 rounded border border-line px-1 text-[10px]">Enter</kbd> to save
               </span>
@@ -989,7 +988,7 @@ function ScenarioCard({
           )}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-4 gap-2">
         <PriceInput label="Entry" value={s.entry} onChange={(v) => onChange({ entry: v })} />
         <PriceInput label={s.isPrimary ? "Stop" : "Stop (initial)"} value={s.stop} onChange={(v) => onChange({ stop: v })} invalid={badStop} />
         <PriceInput label="Target (FTA)" value={s.target} onChange={(v) => onChange({ target: v })} />

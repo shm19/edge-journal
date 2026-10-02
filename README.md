@@ -18,6 +18,7 @@ A personal, self-hosted trading journal for discretionary crypto trading. It's b
 - **Times** are always UTC: stored, entered and shown in UTC, and not configurable.
 - **Screenshots.** Paste (⌘V), drag and drop, or browse.
 - **Export.** Trades as CSV, everything as JSON, or a raw SQLite backup.
+- **Desktop only.** There is no mobile layout; the app needs a window at least 1024 px wide.
 - Single-user password login. Your data stays on your server.
 
 ## Run locally

@@ -51,7 +51,7 @@ export default async function SettingsPage() {
           </form>
         }
       />
-      <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
+      <div className="grid grid-cols-2 gap-5 [&>*]:min-w-0">
         <div className="min-w-0 space-y-5">
           <GeneralSettings initial={settings} />
           <Card>

@@ -105,7 +105,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           Only {s.count} closed trade{s.count === 1 ? "" : "s"} — these numbers will swing a lot until you have 20+. Keep logging.
         </p>
       )}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-6 gap-3">
         <Kpi label="Closed trades" value={s.count} sub={<SampleBadge n={s.count} />} />
         <Kpi label="Win rate" value={<span title="Wins ÷ all closed trades (breakevens count as not-a-win)">{fmtPct(s.winRate)}</span>} sub={`${s.wins}W · ${s.losses}L · ${s.breakevens}BE`} />
         <Kpi label="Expectancy" value={<RValue r={s.expectancy} be={0} />} sub="avg R per trade" />
@@ -114,8 +114,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Kpi label="Max drawdown" value={s.maxDrawdown ? <span className="text-loss">-{s.maxDrawdown.toFixed(2)}R</span> : <span className="text-faint">—</span>} sub={`longest losing streak ${s.longestLossStreak}`} />
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="mt-5 grid grid-cols-3 gap-5">
+        <Card className="col-span-2">
           <CardHeader title="Equity curve (R)" description="Cumulative R of closed taken trades, in order." />
           <div className="px-2 pb-3">
             <EquityChart data={curve} />
@@ -129,7 +129,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-3">
+      <div className="mt-5 grid grid-cols-3 gap-5">
         <Card>
           <CardHeader title="Setups" description="Ranked by expectancy" action={<Link href="/analytics" className="text-xs text-accent">Analytics →</Link>} />
           <ul className="divide-y divide-line px-4 pb-2">

@@ -88,7 +88,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-5">
         <div className="min-w-0 space-y-5">
           {idea.scenarios.length === 0 && (
             <Card className="p-4 text-sm text-muted">

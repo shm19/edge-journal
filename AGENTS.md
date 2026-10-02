@@ -89,6 +89,6 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | New metric | `Summary` / `summarize()` in `src/lib/stats.ts` (with a test) and `src/lib/metrics.ts` |
 | New status | `IDEA_STATUSES` (`schema.ts`), `STATUS_LABEL` (`format.ts`), `STATUS_COLOR` (`components/bits.tsx`). Then decide where it's counted: the dashboard and setup pages filter by status explicitly. |
 | Seed data (setups, tags, scenario types) | `src/db/seed.ts` |
-| Navigation | `src/components/nav.tsx` (desktop sidebar; the mobile bottom bar is due for removal in plan Step 2b) |
+| Navigation | `src/components/nav.tsx` (desktop sidebar only) |
 | UI primitives | `src/components/ui.tsx` (Button, Input, Select, Field, Card, Badge, Segmented, …), `src/components/bits.tsx` (RValue, badges, Kpi, Markdown) |
 | Charts | `src/components/charts.tsx` (Recharts, client) |

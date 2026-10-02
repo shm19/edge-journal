@@ -10,7 +10,7 @@ export interface GalleryImage {
   href?: string;
 }
 
-export function Gallery({ images, columns = "grid-cols-2 sm:grid-cols-3" }: { images: GalleryImage[]; columns?: string }) {
+export function Gallery({ images, columns = "grid-cols-3" }: { images: GalleryImage[]; columns?: string }) {
   const [open, setOpen] = useState<number | null>(null);
   const close = useCallback(() => setOpen(null), []);
   const step = useCallback((d: number) => setOpen((i) => (i == null ? i : (i + d + images.length) % images.length)), [images.length]);

@@ -78,7 +78,8 @@ scripts/                   backup.sh + backtest pipeline (see docs/backtesting.m
   - Don't add timezone parameters or settings back.
 - **Desktop only:**
   - There is no mobile support (decided 2026-10-02). Don't add phone layouts or test at 375 px.
-  - The remaining mobile code (bottom nav, mobile cards, editor reordering) is scheduled for removal in plan Step 2b.
+  - The app shell has `min-w-[1024px]`, so `sm:`/`md:`/`lg:` Tailwind prefixes are always on and must not be used; write the desktop value directly. `xl:` (1280px) is the only real breakpoint.
+  - `/login` sits outside the app shell and stays responsive on purpose.
 - **Lint:** React-compiler rules apply. Use `useSyncExternalStore` for browser-only values, never `setState` inside an effect, and never read refs during render.
 
 ## Deployment

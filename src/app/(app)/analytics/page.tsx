@@ -175,7 +175,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         const rOrDash = (n: number, v: number) => (n ? <RValue r={v} be={0} /> : <span className="text-faint">—</span>);
         return (
           <div className="space-y-5">
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               {[
                 { title: "Skipped on purpose", sub: "Your filter: would taking them have helped?", a: sk },
                 { title: "Missed", sub: "Execution: valid setups you didn't catch", a: ms },
@@ -212,7 +212,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 </Card>
               ))}
             </div>
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-5">
               <Card>
                 <CardHeader title="Skipped — by reason" description="Tag skips under “Skip reason”. Positive R = that reason is costing you." />
                 <ul className="divide-y divide-line px-4 pb-2 text-sm">

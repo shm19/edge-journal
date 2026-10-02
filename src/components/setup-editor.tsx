@@ -52,12 +52,12 @@ export function SetupEditor({ initial, tradeCount = 0 }: { initial: SetupForm; t
     });
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5">
       <Card className="space-y-4 p-4">
         <Field label="Name">
           <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. LHPB retest" autoFocus={!f.id} />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4">
           <Field label="Status" hint="Testing = still collecting data. Retired = no longer traded.">
             <Segmented
               value={f.status}

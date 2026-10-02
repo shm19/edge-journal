@@ -31,7 +31,7 @@ export default async function SetupsPage() {
       {setups.length === 0 ? (
         <EmptyState title="No setups yet" description="Describe each setup's rules so you can measure it." />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           {[...setups]
             .sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name))
             .map((s) => {

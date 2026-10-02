@@ -56,7 +56,7 @@ export function GeneralSettings({
   return (
     <Card>
       <CardHeader title="General" />
-      <div className="grid gap-4 px-4 pb-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-4 px-4 pb-4">
         <Field label="Breakeven band (±R)" hint="Results within this band count as BE, not win/loss.">
           <Input inputMode="decimal" value={f.beThresholdR} onChange={(e) => setF({ ...f, beThresholdR: e.target.value })} />
         </Field>
@@ -69,10 +69,10 @@ export function GeneralSettings({
         <Field label="Timezone" hint="Fixed: every time is entered and shown in UTC.">
           <Input value="UTC" disabled readOnly aria-readonly />
         </Field>
-        <Field label="Coins you trade" hint="Comma separated — used for suggestions." className="sm:col-span-2">
+        <Field label="Coins you trade" hint="Comma separated — used for suggestions." className="col-span-2">
           <Input value={f.symbols} onChange={(e) => setF({ ...f, symbols: e.target.value.toUpperCase() })} />
         </Field>
-        <div className="flex items-center gap-3 sm:col-span-2">
+        <div className="flex items-center gap-3 col-span-2">
           <Button variant="primary" onClick={submit} disabled={pending}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save settings
           </Button>
@@ -122,8 +122,8 @@ export function TagManager({ tags, usage }: { tags: Tag[]; usage: Record<number,
   };
 
   const editor = editing && (
-    <div className="mx-4 mb-3 grid gap-3 rounded-lg border border-accent/40 bg-accent/[0.04] p-3 sm:grid-cols-2">
-      <p className="text-xs font-medium text-muted sm:col-span-2">{editing.id ? "Edit tag" : "New tag"}</p>
+    <div className="mx-4 mb-3 grid grid-cols-2 gap-3 rounded-lg border border-accent/40 bg-accent/[0.04] p-3">
+      <p className="text-xs font-medium text-muted col-span-2">{editing.id ? "Edit tag" : "New tag"}</p>
       <Field label="Name" htmlFor="tag-name">
         <Input
           id="tag-name"
@@ -151,11 +151,11 @@ export function TagManager({ tags, usage }: { tags: Tag[]; usage: Record<number,
         </Select>
       </Field>
       {editing.group === NEW_GROUP && (
-        <Field label="New group name" htmlFor="tag-new-group" className="sm:col-span-2">
+        <Field label="New group name" htmlFor="tag-new-group" className="col-span-2">
           <Input id="tag-new-group" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="e.g. Session, Exit, Emotion" />
         </Field>
       )}
-      <div className="flex flex-wrap items-center gap-1.5 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-1.5 col-span-2">
         <span className="mr-1 text-xs text-faint">Color</span>
         {TAG_COLORS.map((c) => (
           <button
@@ -169,8 +169,8 @@ export function TagManager({ tags, usage }: { tags: Tag[]; usage: Record<number,
           />
         ))}
       </div>
-      {error && <p className="text-sm text-loss sm:col-span-2">{error}</p>}
-      <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
+      {error && <p className="text-sm text-loss col-span-2">{error}</p>}
+      <div className="flex flex-wrap items-center justify-between gap-2 col-span-2">
         {editing.id ? (
           <Button
             variant="danger"
@@ -358,7 +358,7 @@ function TypeManager({
         }
       />
       {editing && (
-        <div className="mx-4 mb-3 grid gap-3 rounded-lg border border-accent/40 bg-accent/[0.04] p-3 sm:grid-cols-[1fr_2fr_auto]">
+        <div className="mx-4 mb-3 grid grid-cols-[1fr_2fr_auto] gap-3 rounded-lg border border-accent/40 bg-accent/[0.04] p-3">
           <Field label="Name">
             <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} autoFocus />
           </Field>
@@ -373,7 +373,7 @@ function TypeManager({
               <X className="h-4 w-4" />
             </Button>
           </div>
-          {error && <p className="text-sm text-loss sm:col-span-3">{error}</p>}
+          {error && <p className="text-sm text-loss col-span-3">{error}</p>}
         </div>
       )}
       <ul className="divide-y divide-line px-4 pb-2">
