@@ -5,6 +5,8 @@ All notable changes are recorded here, following [Keep a Changelog](https://keep
 > **About the history before v0.1.0.** The app was built (2026-10-02, sessions 1–4) before a git repository existed. The commits up to the `v0.1.0` tag are **milestone commits reconstructed from the final state**: the files were grouped by area in dependency order, so `git log` tells the story. Commit timestamps are the time of the reconstruction, not when the work was done. Intermediate commits may not build on their own. `v0.1.0` and every commit after it build and pass the checks. From v0.1.0 on, every plan step and change follows [docs/workflow.md](docs/workflow.md) and gets its own commit(s).
 
 ## [Unreleased]
+### Removed
+- The "Duplicate" button on the trade page and its server action.
 
 ## [0.1.0] - 2026-10-02
 ### Added

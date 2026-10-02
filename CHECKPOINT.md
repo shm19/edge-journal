@@ -90,7 +90,7 @@ Every step must also pass the usual checks: `npm test`, `typecheck`, `lint`, `bu
 
 **After Step 3b:** coverage must not drop below the thresholds.
 
-**Recommended order:** ~~0~~ → 2 → 2b → 3 → 3b → 4 → 5 → 6 → 7. (Step 0 is done.)
+**Recommended order:** ~~0~~ → ~~2~~ → 2b → 3 → 3b → 4 → 5 → 6 → 7. (Step 0 is done.)
 
 **Process for every step and change:** follow [docs/workflow.md](docs/workflow.md).
 1. Scope.
@@ -231,7 +231,23 @@ Reason: all times should be UTC. There should be no setting and no banner.
 - **Docs:** `docs/product.md` ("Times…" decision), `docs/architecture.md` (conventions), README.
 - **Done when:** no timezone UI exists anywhere; a time typed as 14:00 shows as 14:00 UTC on every page; analytics weekday and month buckets use UTC.
 
-### ☐ Step 2: Remove "Duplicate trade"
+### ☑ Step 2: Remove "Duplicate trade" (done 2026-10-02)
+**Workflow checklist:**
+- [x] Scope.
+- [x] Built with the lazy-developer skill. Rung 1, delete: 40 lines removed, 0 added.
+- [x] Code review: no P0/P1.
+- [x] Product review: no P0/P1.
+- [x] Triage:
+  - Applied: tick this step.
+  - Deferred to Backlog: the Delete button ignores the `deleteIdea` result (this was already the case before the change).
+- [x] Typecheck, lint, 41 tests and build all green.
+- [x] Docs: CHANGELOG. No other doc mentioned the feature.
+- [x] Browser: the trade page shows only Edit and Delete, with no console errors.
+- [x] Committed (see `git log`).
+
+**What was done:** removed the `duplicateIdea` server action (`src/lib/actions.ts`) and the Duplicate button (`src/components/idea-actions.tsx`).
+
+**Original plan:**
 - **Remove:**
   - `duplicateIdea` from `src/lib/actions.ts`;
   - the Duplicate button from `src/components/idea-actions.tsx`;
@@ -405,6 +421,7 @@ Add `npm run e2e`.
 - **Done when:** the numbers match a hand calculation on a known set (e.g. +2R, −1R, +3R at 1% on $1,000, both modes); it works with filters; it's linked from the dashboard and setup pages.
 
 ## Backlog (not scheduled)
+- Show an error if deleting an idea fails. Right now `idea-actions.tsx` always redirects (from the Step 2 product review).
 - **Git tooling** (from the Step 0 review):
   - a `.githooks/pre-commit` blocking staged `.env*` and `*.db*` (or `gitleaks`);
   - `.gitattributes` (`package-lock.json -diff`, `drizzle/meta/*.json linguist-generated`);

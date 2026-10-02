@@ -144,31 +144,6 @@ export async function deleteIdea(id: number): Promise<ActionResult> {
   return { ok: true };
 }
 
-export async function duplicateIdea(id: number): Promise<ActionResult<{ id: number }>> {
-  await requireAuth();
-  const src = db.select().from(ideas).where(eq(ideas.id, id)).get();
-  if (!src) return { ok: false, error: "Idea not found" };
-  const newId = db.transaction((tx) => {
-    const { id: _omit, createdAt: _c, updatedAt: _u, ...rest } = src;
-    const nid = tx
-      .insert(ideas)
-      .values({ ...rest, openedAt: new Date().toISOString(), closedAt: null, review: "", followedPlan: null, outcome: null })
-      .returning({ id: ideas.id })
-      .get().id;
-    const t = tx.select().from(ideaTags).where(eq(ideaTags.ideaId, id)).all();
-    if (t.length) tx.insert(ideaTags).values(t.map((x) => ({ ideaId: nid, tagId: x.tagId }))).run();
-    const sc = tx.select().from(scenarios).where(eq(scenarios.ideaId, id)).all();
-    for (const { id: _sid, ...s } of sc) {
-      tx.insert(scenarios)
-        .values({ ...s, ideaId: nid, exitPrice: null, exitReason: null })
-        .run();
-    }
-    return nid;
-  });
-  revalidateAll();
-  return { ok: true, data: { id: newId } };
-}
-
 // ---------- Setups ----------
 
 export async function saveSetup(payload: unknown): Promise<ActionResult<{ id: number }>> {
