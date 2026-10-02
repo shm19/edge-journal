@@ -294,7 +294,13 @@ Reason: Shayan uses the app on desktop only. Removing the mobile code simplifies
   - README: list it under the features.
 - **Done when:** no mobile-only code paths remain (grep for `md:hidden`, `hidden md:`, `MobileItem`, `bottom-20`); desktop looks unchanged; checks pass.
 
-### ☐ Step 3: Senior code review (agent, report only)
+### ☑ Step 3: Senior code review (agent, report only) (done 2026-10-02)
+**Result:** report in [docs/review-2026-10-02.md](docs/review-2026-10-02.md): 2 P0, 12 P1, 16 numbered P2 items. No code was changed. Triage with Shayan happens at the start of Step 4.
+- P0: `saveIdea` stale scenario ids; mistake cost shows `−-1.00R`, double-counts when two mistakes share an alternative, and partial totals look complete.
+- Top P1: the idea page loads the whole DB three times; missing indexes; status filtering scattered (32 comparisons in 5 files); `queries.ts` can't be unit-tested because of `server-only`; untested areas; auto close time skews backdated trades; fail-open session secret and cookie flag.
+- Workflow: review-only step, so there was no build and no product review; the senior review is the deliverable. No browser check (no UI change).
+
+**Original plan:**
 Run one senior reviewer agent. It should read `AGENTS.md` and all of `docs/` first, must not edit code, and writes its report to `docs/review-YYYY-MM-DD.md`. It should cover:
 - **Architecture and boundaries:** server/client split, the "use client" export rules, where business logic lives.
 - **Duplication and file size:**
