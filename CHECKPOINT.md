@@ -379,7 +379,20 @@ Add `npm run e2e`.
 - The coverage report is linked in this file.
 - Coverage gaps that are hard to reach are listed with a reason.
 
-### ☐ Step 4: Cleanup from the review
+### ☐ Step 4: Cleanup from the review (in progress; started before Step 3b at Shayan's request)
+**Order change (Shayan, 2026-10-02):** Step 4 runs now, with its tests written as part of each fix; Step 3b (the rest of the coverage targets and Playwright) follows. Test tooling is already installed (vitest config, `test/db.ts` temp-DB helper, RTL, jsdom, coverage-v8, Playwright).
+
+**Triage of docs/review-2026-10-02.md** (Shayan said to apply the review):
+- **Apply (work package 1, data layer):** P0-1, P0-2, P1-1, P1-2, P1-3, P1-4, P1-10, P2-3.
+- **Apply (work package 2, auth/actions/routes):** P1-11, P1-12, P2-6 (target side + exit coherence), P2-7, P2-9, P2-16, security headers, `safeNext` / throttle / `sniff` / `csvCell` moved into `src/lib` with tests.
+- **Apply (work package 3, UI):** P1-5, P1-8, P1-9, P2-1, P2-2, P2-4, P2-10, the "—" vs 0 fixes, empty states, destructive-action errors, explicit Cancel target, P2-14 (formatter cache).
+- **Defaults I chose where the review left a product call** (change them if you disagree):
+  - Mistake overlap rule: a trade's total counts each linked alternative's delta once, plus manual costs; per-type rows show each mistake's own delta.
+  - Closing a trade no longer stamps `closedAt = now`; it defaults to the opened time.
+- **Defer (Backlog):** P1-7 and the e2e run (Step 3b), P2-5 (comment only, done inline), P2-8 warnings, P2-11 checklist keyed by text, P2-12 one date concept, P2-13 mixed-status badge, P2-15 journal paging, login-throttle redesign, session versioning, markdown image policy, `__Host-` cookie, read-path auth asserts, upload streaming cap.
+
+
+**Original plan:**
 - Triage the review with Shayan, then do the agreed P0/P1 items.
 - Candidates already known:
   - Split `idea-editor.tsx` into `ScenarioCard`, `MistakesCard`, `ScreenshotsCard`, `DateTimeField` and a basics card.
