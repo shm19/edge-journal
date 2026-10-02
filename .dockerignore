@@ -1,0 +1,20 @@
+node_modules
+.next
+.git
+# app data & secrets never enter the image build context
+/data
+/.data-*
+/backups
+*.db
+*.db-wal
+*.db-shm
+.env*
+!.env.example
+# not needed to build the app
+scripts/backtest-data
+coverage
+test-results
+playwright-report
+*.tsbuildinfo
+.claude
+*.log

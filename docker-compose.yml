@@ -1,0 +1,14 @@
+services:
+  journal:
+    build: .
+    container_name: edge-journal
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./data:/data
+    # Bind to localhost only; put Caddy / nginx in front for HTTPS (see README).
+    ports:
+      - "127.0.0.1:3000:3000"
