@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790951798870,
+      "tag": "0000_broad_starbolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790954706603,
+      "tag": "0001_ancient_vision",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790957073427,
+      "tag": "0002_mute_sinister_six",
+      "breakpoints": true
+    }
+  ]
+}
