@@ -401,7 +401,7 @@ Add `npm run e2e`.
 - [x] 5 typecheck, lint, 283 tests (41 before) and build green. The e2e run is still Step 3b.
 - [x] 6 Docs: AGENTS, architecture, data-model, product, README, `.env.example`, CHANGELOG.
 - [x] 7 Browser (dashboard, trade page, editor, analytics skips): renders correctly, signed mistake costs and "not measured" rows show. Not clicked: saving, the Hit/Miss confirm, the `(shared)` / closed-time hints.
-- [x] 8 Committed (see `git log`).
+- [x] 8 Committed: `b5b57ac` (data layer) and `055a4c9`.
 
 **What was done:** every item in the Step 4 triage above (P0-1, P0-2, P1-1 to P1-5, P1-8 to P1-12, plus the cheap P2s). Highlights: mistake cost is signed and overlap-aware; indexes (migration `0003`, restart the dev server after applying); `queries.ts` split from the pure `analytics.ts`; one `status.ts`; the editor shell went from 1107 to 268 lines; fail-closed session secret; security headers; a missing close time defaults to the open time.
 
