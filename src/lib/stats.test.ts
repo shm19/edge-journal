@@ -3,6 +3,7 @@ import {
   compareScenarios,
   equityCurve,
   groupSummaries,
+  mistakeCost,
   outcomeOf,
   plannedRR,
   realizedR,
@@ -11,6 +12,7 @@ import {
   skipAudit,
   stopIsValid,
   summarize,
+  tradeMistakeCost,
 } from "./stats";
 
 describe("R math", () => {
@@ -177,5 +179,56 @@ describe("review fixes", () => {
     expect(sessionOf("2026-12-01T14:30:00Z")).toBe("London/NY overlap");
     // 07:30 UTC in winter is London (07:30 GMT), in summer London too (08:30 BST).
     expect(sessionOf("2026-12-01T07:30:00Z")).toBe("London");
+  });
+});
+
+describe("mistakeCost", () => {
+  const sc = (exitPrice: number | null, exitReason: string | null = "manual") => ({ entry: 100, stop: 90, exitPrice, exitReason });
+
+  it("is alternative R minus primary R: positive when the mistake lost R", () => {
+    expect(mistakeCost("long", sc(130), sc(110))).toBe(2); // +3R alternative vs +1R actual: lost 2R
+  });
+  it("is negative when the actual trade did better than the alternative (the mistake saved R)", () => {
+    expect(mistakeCost("long", sc(95), sc(110))).toBe(-1.5);
+  });
+  it("works for shorts", () => {
+    const s = (exitPrice: number) => ({ entry: 100, stop: 110, exitPrice, exitReason: "manual" });
+    expect(mistakeCost("short", s(80), s(90))).toBe(1);
+  });
+  it("is null when unlinked or the primary is missing", () => {
+    expect(mistakeCost("long", undefined, sc(110))).toBeNull();
+    expect(mistakeCost("long", sc(130), undefined)).toBeNull();
+  });
+  it("is null while the primary or the alternative is open", () => {
+    expect(mistakeCost("long", sc(130), sc(null))).toBeNull();
+    expect(mistakeCost("long", sc(null), sc(110))).toBeNull();
+  });
+  it("is null when risk is zero", () => {
+    expect(mistakeCost("long", { entry: 100, stop: 100, exitPrice: 120, exitReason: "manual" }, sc(110))).toBeNull();
+  });
+  it("treats not-filled as 0R", () => {
+    expect(mistakeCost("long", sc(null, "not_filled"), sc(90))).toBe(1);
+  });
+});
+
+describe("tradeMistakeCost", () => {
+  const m = (cost: number | null, scenarioId: number | null = null, costR: number | null = null) => ({ cost, scenarioId, costR });
+
+  it("is null when no cost is known", () => {
+    expect(tradeMistakeCost([])).toBeNull();
+    expect(tradeMistakeCost([m(null), m(null, 4)])).toBeNull();
+  });
+  it("adds independent manual costs", () => {
+    expect(tradeMistakeCost([m(1, null, 1), m(0.5, null, 0.5)])).toBe(1.5);
+  });
+  it("counts a shared alternative's delta once", () => {
+    expect(tradeMistakeCost([m(2, 7), m(2, 7)])).toBe(2);
+    expect(tradeMistakeCost([m(2, 7), m(1, 8)])).toBe(3);
+  });
+  it("still adds a manual cost on top of a linked delta, even on the same alternative", () => {
+    expect(tradeMistakeCost([m(2, 7), m(0.5, 7, 0.5)])).toBe(2.5);
+  });
+  it("ignores unmeasured mistakes but keeps the measured ones, and keeps negative totals", () => {
+    expect(tradeMistakeCost([m(null, 7), m(-1, 8)])).toBe(-1);
   });
 });

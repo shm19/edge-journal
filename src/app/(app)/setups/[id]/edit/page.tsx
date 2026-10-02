@@ -1,17 +1,15 @@
-import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { SetupEditor } from "@/components/setup-editor";
 import { PageHeader } from "@/components/ui";
-import { db } from "@/db";
-import { ideas, setups } from "@/db/schema";
+import { getSetup, setupIdeaCount } from "@/lib/queries";
 
 export const metadata = { title: "Edit setup" };
 
 export default async function EditSetupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const setup = db.select().from(setups).where(eq(setups.id, Number(id))).get();
+  const setup = getSetup(Number(id));
   if (!setup) notFound();
-  const tradeCount = db.select({ id: ideas.id }).from(ideas).where(eq(ideas.setupId, setup.id)).all().length;
+  const tradeCount = setupIdeaCount(setup.id);
   return (
     <>
       <PageHeader title={`Edit · ${setup.name}`} />

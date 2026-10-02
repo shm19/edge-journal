@@ -1,15 +1,18 @@
+import type { SetupStatus } from "@/db/schema";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { RValue, SampleBadge } from "@/components/bits";
 import { Badge, EmptyState, LinkButton, PageHeader } from "@/components/ui";
 import { fmtPct } from "@/lib/format";
-import { listSetups, loadIdeas, observationStats, primaryPoints } from "@/lib/queries";
+import { observationStats, primaryPoints } from "@/lib/analytics";
+import { listSetups, loadIdeas } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
+import { inBuckets } from "@/lib/status";
 import { summarize } from "@/lib/stats";
 
 export const metadata = { title: "Setups" };
 
-const STATUS_TONE: Record<string, string> = { live: "#34d399", testing: "#22d3ee", retired: "#71717a" };
+const STATUS_TONE: Record<SetupStatus, string> = { live: "#34d399", testing: "#22d3ee", retired: "#71717a" };
 
 export default async function SetupsPage() {
   const { beThresholdR: be } = getSettings();
@@ -36,10 +39,10 @@ export default async function SetupsPage() {
             .sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name))
             .map((s) => {
               const mine = ideas.filter((i) => i.setupId === s.id);
-              const taken = summarize(primaryPoints(mine.filter((i) => i.status === "taken")), be);
-              const fwd = summarize(primaryPoints(mine.filter((i) => i.status === "forward_test")), be);
-              const obs = observationStats(mine.filter((i) => i.status === "forward_test"));
-              const bt = summarize(primaryPoints(mine.filter((i) => i.status === "backtest")), be);
+              const taken = summarize(primaryPoints(inBuckets(mine, "taken")), be);
+              const fwd = summarize(primaryPoints(inBuckets(mine, "forward")), be);
+              const obs = observationStats(inBuckets(mine, "forward"));
+              const bt = summarize(primaryPoints(inBuckets(mine, "backtest")), be);
               return (
                 <Link
                   key={s.id}

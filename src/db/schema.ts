@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 const timestamps = {
   createdAt: text("created_at").notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
@@ -14,6 +14,8 @@ export const REGIMES = ["range", "trend", "unclear"] as const;
 export const EXIT_REASONS = ["target", "stop", "invalidation", "manual", "be", "time", "not_filled", "open"] as const;
 export const OUTCOMES = ["hit", "miss"] as const;
 export const ATTACHMENT_KINDS = ["before", "during", "after"] as const;
+/** Tag group the Skips analytics reads; Settings must not rename or delete it. */
+export const SKIP_REASON_GROUP = "Skip reason";
 export const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
 
 export type SetupStatus = (typeof SETUP_STATUSES)[number];
@@ -64,7 +66,9 @@ export const ideas = sqliteTable("ideas", {
   /** Yes/no result for observation-only forward tests (no prices), e.g. "weekly open revisited". */
   outcome: text("outcome", { enum: OUTCOMES }),
   ...timestamps,
-});
+},
+  (t) => [index("ideas_setup_idx").on(t.setupId)],
+);
 
 export const scenarioTypes = sqliteTable("scenario_types", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -85,7 +89,9 @@ export const scenarios = sqliteTable("scenarios", {
   exitPrice: real("exit_price"),
   exitReason: text("exit_reason", { enum: EXIT_REASONS }),
   notes: text("notes").notNull().default(""),
-});
+},
+  (t) => [index("scenarios_idea_idx").on(t.ideaId), index("scenarios_type_idx").on(t.scenarioTypeId)],
+);
 
 /** Reusable mistake kinds ("Moved stop to BE", "Early TP", …), managed in Settings. */
 export const mistakeTypes = sqliteTable("mistake_types", {
@@ -106,7 +112,13 @@ export const ideaMistakes = sqliteTable("idea_mistakes", {
   note: text("note").notNull().default(""),
   costR: real("cost_r"),
   scenarioId: integer("scenario_id").references(() => scenarios.id, { onDelete: "set null" }),
-});
+},
+  (t) => [
+    index("idea_mistakes_idea_idx").on(t.ideaId),
+    index("idea_mistakes_type_idx").on(t.mistakeTypeId),
+    index("idea_mistakes_scenario_idx").on(t.scenarioId),
+  ],
+);
 
 export const tags = sqliteTable("tags", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -125,7 +137,8 @@ export const ideaTags = sqliteTable(
       .notNull()
       .references(() => tags.id, { onDelete: "cascade" }),
   },
-  (t) => [primaryKey({ columns: [t.ideaId, t.tagId] })],
+  // The composite key covers lookups by idea; this covers lookups by tag (deleteTag, usage counts).
+  (t) => [primaryKey({ columns: [t.ideaId, t.tagId] }), index("idea_tags_tag_idx").on(t.tagId)],
 );
 
 export const attachments = sqliteTable("attachments", {
@@ -137,7 +150,9 @@ export const attachments = sqliteTable("attachments", {
   caption: text("caption").notNull().default(""),
   kind: text("kind", { enum: ATTACHMENT_KINDS }).notNull().default("before"),
   createdAt: text("created_at").notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
-});
+},
+  (t) => [index("attachments_idea_idx").on(t.ideaId)],
+);
 
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),

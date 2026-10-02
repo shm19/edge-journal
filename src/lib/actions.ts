@@ -5,7 +5,19 @@ import path from "node:path";
 import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, UPLOAD_DIR } from "@/db";
-import { attachments, ideaMistakes, ideas, ideaTags, mistakeTypes, scenarios, scenarioTypes, settings, setups, tags } from "@/db/schema";
+import {
+  attachments,
+  ideaMistakes,
+  ideas,
+  ideaTags,
+  mistakeTypes,
+  scenarios,
+  scenarioTypes,
+  settings,
+  setups,
+  SKIP_REASON_GROUP,
+  tags,
+} from "@/db/schema";
 import { requireAuth } from "./auth";
 import {
   firstError,
@@ -22,6 +34,8 @@ function removeUpload(fileName: string) {
   const full = path.join(UPLOAD_DIR, path.basename(fileName));
   fs.promises.unlink(full).catch(() => {});
 }
+
+const SKIP_GROUP_LOCKED = `The “${SKIP_REASON_GROUP}” tag group feeds the Skips analytics, so it can't be renamed or deleted. Edit its tags instead.`;
 
 function revalidateAll() {
   revalidatePath("/", "layout");
@@ -68,15 +82,16 @@ export async function saveIdea(payload: unknown): Promise<ActionResult<{ id: num
         .run();
       const scenarioIds: number[] = [];
       for (const { id: sid, ...s } of scen) {
-        if (sid) {
-          tx.update(scenarios)
+        // An id that no longer exists on THIS idea (deleted in another tab, or from another idea) updates
+        // nothing: insert it as a new scenario so the edit isn't lost and mistake links never dangle or cross ideas.
+        const updated =
+          sid != null &&
+          tx
+            .update(scenarios)
             .set(s)
             .where(and(eq(scenarios.id, sid), eq(scenarios.ideaId, ideaId)))
-            .run();
-          scenarioIds.push(sid);
-        } else {
-          scenarioIds.push(tx.insert(scenarios).values({ ...s, ideaId }).returning({ id: scenarios.id }).get().id);
-        }
+            .run().changes > 0;
+        scenarioIds.push(updated ? sid! : tx.insert(scenarios).values({ ...s, ideaId }).returning({ id: scenarios.id }).get().id);
       }
 
       // Mistakes: replace; link to the saved alternative by position.
@@ -281,6 +296,7 @@ export async function saveSettings(payload: unknown): Promise<ActionResult> {
 
 export async function renameTagGroup(from: string, to: string): Promise<ActionResult> {
   await requireAuth();
+  if (from === SKIP_REASON_GROUP) return { ok: false, error: SKIP_GROUP_LOCKED };
   const name = to.trim();
   if (!name || name.length > 40) return { ok: false, error: "Group name must be 1–40 characters" };
   const all = db.select().from(tags).all();
@@ -297,6 +313,7 @@ export async function renameTagGroup(from: string, to: string): Promise<ActionRe
 
 export async function deleteTagGroup(group: string): Promise<ActionResult> {
   await requireAuth();
+  if (group === SKIP_REASON_GROUP) return { ok: false, error: SKIP_GROUP_LOCKED };
   db.delete(tags).where(eq(tags.group, group)).run(); // idea_tags rows cascade
   revalidateAll();
   return { ok: true };

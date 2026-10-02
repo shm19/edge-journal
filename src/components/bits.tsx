@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { Setup, Tag } from "@/db/schema";
+import type { IdeaStatus, Setup, Tag } from "@/db/schema";
 import { cn } from "@/lib/cn";
 import { fmtR, rTone, STATUS_LABEL } from "@/lib/format";
 import { sampleConfidence } from "@/lib/stats";
@@ -12,7 +12,7 @@ export function RValue({ r, be = 0.1, className, digits }: { r: number | null | 
   return <span className={cn("tabular font-semibold", toneClass[rTone(r, be)], className)}>{fmtR(r, digits)}</span>;
 }
 
-const STATUS_COLOR: Record<string, string> = {
+const STATUS_COLOR: Record<IdeaStatus, string> = {
   taken: "#818cf8",
   skipped: "#a1a1aa",
   missed: "#fbbf24",
@@ -20,8 +20,8 @@ const STATUS_COLOR: Record<string, string> = {
   backtest: "#a78bfa",
 };
 
-export function StatusBadge({ status }: { status: string }) {
-  return <Badge color={STATUS_COLOR[status]}>{STATUS_LABEL[status] ?? status}</Badge>;
+export function StatusBadge({ status }: { status: IdeaStatus }) {
+  return <Badge color={STATUS_COLOR[status]}>{STATUS_LABEL[status]}</Badge>;
 }
 
 export function SetupBadge({ setup }: { setup: Pick<Setup, "name" | "color"> | null }) {

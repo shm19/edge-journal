@@ -13,15 +13,14 @@ import {
   DIMENSIONS,
   dimensionKeys,
   isDimension,
-  listSetups,
-  listTags,
-  loadIdeas,
   parseFilters,
   primaryPoints,
   scenarioComparisons,
-  tagGroups,
-} from "@/lib/queries";
+} from "@/lib/analytics";
+import { listSetups, listTags, loadIdeas, tagGroups } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
+import { SKIP_REASON_GROUP } from "@/db/schema";
+import { STATUS_BUCKETS } from "@/lib/status";
 import { equityCurve, groupSummaries, skipAudit, type Summary } from "@/lib/stats";
 
 export const metadata = { title: "Analytics" };
@@ -163,11 +162,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       })()}
 
       {tab === "skips" && (() => {
-        const skippedIdeas = applyFilters(all, { ...filters, status: ["skipped", "missed"] });
+        const skippedIdeas = applyFilters(all, { ...filters, status: [...STATUS_BUCKETS.skips] });
         const pts = primaryPoints(skippedIdeas);
         const sk = skipAudit(pts.filter((p) => p.idea.status === "skipped"), be);
         const ms = skipAudit(pts.filter((p) => p.idea.status === "missed"), be);
-        const byReason = groupSummaries(pts.filter((p) => p.idea.status === "skipped"), dimensionKeys("group:Skip reason"), be).sort(
+        const byReason = groupSummaries(pts.filter((p) => p.idea.status === "skipped"), dimensionKeys(`group:${SKIP_REASON_GROUP}`), be).sort(
           (a, b) => b.summary.count - a.summary.count,
         );
         const bySetup = groupSummaries(pts, dimensionKeys("setup"), be).sort((a, b) => b.summary.count - a.summary.count);
@@ -214,7 +213,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             </div>
             <div className="grid grid-cols-2 gap-5">
               <Card>
-                <CardHeader title="Skipped — by reason" description="Tag skips under “Skip reason”. Positive R = that reason is costing you." />
+                <CardHeader title="Skipped — by reason" description={`Tag skips under “${SKIP_REASON_GROUP}”. Positive R = that reason is costing you.`} />
                 <ul className="divide-y divide-line px-4 pb-2 text-sm">
                   {byReason.map((g) => (
                     <li key={g.key} className="flex items-center justify-between py-2">
@@ -226,7 +225,13 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                       </span>
                     </li>
                   ))}
-                  {!byReason.length && <li className="py-3 text-faint">No skipped ideas with an outcome yet.</li>}
+                  {!byReason.length && (
+                    <li className="py-3 text-faint">
+                      {groupsList.includes(SKIP_REASON_GROUP)
+                        ? "No skipped ideas with an outcome yet."
+                        : `No “${SKIP_REASON_GROUP}” tag group found. Add tags in that group in Settings to compare reasons.`}
+                    </li>
+                  )}
                 </ul>
               </Card>
               <Card>

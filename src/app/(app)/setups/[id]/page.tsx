@@ -8,35 +8,37 @@ import { Gallery } from "@/components/gallery";
 import { IdeaTable } from "@/components/idea-table";
 import { Badge, Card, CardHeader, LinkButton } from "@/components/ui";
 import { fmtDate, fmtNum, fmtPct } from "@/lib/format";
-import { dimensionKeys, listSetups, loadIdeas, observationStats, primaryPoints, scenarioComparisons } from "@/lib/queries";
+import { dimensionKeys, observationStats, primaryPoints, scenarioComparisons } from "@/lib/analytics";
+import { getSetup, loadIdeas } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
+import { inBuckets } from "@/lib/status";
 import { equityCurve, groupSummaries, summarize } from "@/lib/stats";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return { title: listSetups().find((s) => s.id === Number(id))?.name ?? "Setup" };
+  return { title: getSetup(Number(id))?.name ?? "Setup" };
 }
 
 export default async function SetupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const setup = listSetups().find((s) => s.id === Number(id));
+  const setup = getSetup(Number(id));
   if (!setup) notFound();
   const { beThresholdR: be } = getSettings();
   const mine = loadIdeas().filter((i) => i.setupId === setup.id);
-  const taken = mine.filter((i) => i.status === "taken");
+  const taken = inBuckets(mine, "taken");
   const points = primaryPoints(taken);
   const s = summarize(points, be);
-  const fwd = summarize(primaryPoints(mine.filter((i) => i.status === "forward_test")), be);
-  const skipped = summarize(primaryPoints(mine.filter((i) => i.status === "skipped" || i.status === "missed")), be);
-  const backtest = summarize(primaryPoints(mine.filter((i) => i.status === "backtest")), be);
-  const obs = observationStats(mine.filter((i) => i.status === "forward_test"));
+  const fwd = summarize(primaryPoints(inBuckets(mine, "forward")), be);
+  const skipped = summarize(primaryPoints(inBuckets(mine, "skips")), be);
+  const backtest = summarize(primaryPoints(inBuckets(mine, "backtest")), be);
+  const obs = observationStats(inBuckets(mine, "forward"));
   // Until there are live trades, chart the backtest (or forward test) so the setup page isn't empty.
   const curveSource = points.length
     ? { label: "taken trades", pts: points }
     : (() => {
-        const bt = primaryPoints(mine.filter((i) => i.status === "backtest"));
+        const bt = primaryPoints(inBuckets(mine, "backtest"));
         if (bt.length) return { label: "backtest trades", pts: bt };
-        return { label: "forward tests", pts: primaryPoints(mine.filter((i) => i.status === "forward_test")) };
+        return { label: "forward tests", pts: primaryPoints(inBuckets(mine, "forward")) };
       })();
   const curve = equityCurve(curveSource.pts).map((p) => ({ n: p.n, cum: p.cum, label: fmtDate(p.date) }));
 

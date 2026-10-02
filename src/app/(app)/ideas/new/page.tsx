@@ -1,10 +1,8 @@
 import { IdeaEditor } from "@/components/idea-editor";
 import { PageHeader } from "@/components/ui";
 import { newEditorIdea } from "@/lib/editor-shape";
-import { desc } from "drizzle-orm";
-import { db } from "@/db";
-import { IDEA_STATUSES, ideas } from "@/db/schema";
-import { listMistakeTypes, listScenarioTypes, listSetups, listTags } from "@/lib/queries";
+import { IDEA_STATUSES } from "@/db/schema";
+import { lastSymbol, listMistakeTypes, listScenarioTypes, listSetups, listTags } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 
 export const metadata = { title: "New idea" };
@@ -39,9 +37,4 @@ export default async function NewIdeaPage({ searchParams }: { searchParams: Prom
       />
     </>
   );
-}
-
-/** Pre-fill the coin with the last one you logged. */
-function lastSymbol(): string | undefined {
-  return db.select({ s: ideas.symbol }).from(ideas).orderBy(desc(ideas.id)).limit(1).get()?.s;
 }

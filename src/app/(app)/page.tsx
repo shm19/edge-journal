@@ -5,9 +5,11 @@ import { EquityChart, RHistogram } from "@/components/charts";
 import { IdeaTable } from "@/components/idea-table";
 import { Card, CardHeader, EmptyState, LinkButton, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import { fmtDate, fmtNum, fmtPct, fmtR } from "@/lib/format";
-import { loadIdeas, mistakeSummary, observationStats, primaryPoints } from "@/lib/queries";
+import { fmtCost, fmtDate, fmtNum, fmtPct, fmtR } from "@/lib/format";
+import { mistakeSummary, observationStats, primaryPoints } from "@/lib/analytics";
+import { loadIdeas } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
+import { inBuckets, isOpen } from "@/lib/status";
 import { equityCurve, groupSummaries, summarize } from "@/lib/stats";
 
 export const metadata = { title: "Dashboard" };
@@ -34,19 +36,17 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         : null;
   const inRange = since ? all.filter((i) => i.date >= since) : all;
 
-  const taken = inRange.filter((i) => i.status === "taken");
+  const taken = inBuckets(inRange, "taken");
   const points = primaryPoints(taken);
   const s = summarize(points, be);
   const curve = equityCurve(points).map((p) => ({ n: p.n, cum: p.cum, label: fmtDate(p.date) }));
-  const open = all.filter((i) => i.status === "taken" && i.primary && i.primary.r == null);
-  const noOutcome = all.filter(
-    (i) => (i.status === "skipped" || i.status === "missed" || i.status === "forward_test") && i.outcome == null && (!i.primary || i.primary.r == null),
-  );
-  const noReview = all.filter((i) => i.status === "taken" && i.primary?.r != null && (!i.review.trim() || i.followedPlan == null));
-  const obs = observationStats(inRange.filter((i) => i.status === "forward_test"));
+  const open = inBuckets(all, "taken").filter(isOpen);
+  const noOutcome = inBuckets(all, "skips", "forward").filter((i) => i.outcome == null && (!i.primary || i.primary.r == null));
+  const noReview = inBuckets(all, "taken").filter((i) => i.primary?.r != null && (!i.review.trim() || i.followedPlan == null));
+  const obs = observationStats(inBuckets(inRange, "forward"));
 
   const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
-  const week = summarize(primaryPoints(all.filter((i) => i.status === "taken" && i.date >= weekAgo)), be);
+  const week = summarize(primaryPoints(inBuckets(all, "taken").filter((i) => i.date >= weekAgo)), be);
 
   const bySetup = groupSummaries(points, (p) => [p.idea.setup?.name ?? "No setup"], be)
     .map((g) => ({ ...g, setup: g.points[0].idea.setup }))
@@ -55,10 +55,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const mistakes = mistakeSummary(taken);
   const mistakeRate = taken.length ? taken.filter((i) => i.mistakes.length).length / taken.length : null;
 
-  const nonTaken = primaryPoints(inRange.filter((i) => i.status !== "taken"));
-  const fwd = summarize(nonTaken.filter((p) => p.idea.status === "forward_test"), be);
-  const skipped = summarize(nonTaken.filter((p) => p.idea.status === "skipped" || p.idea.status === "missed"), be);
-  const backtest = summarize(nonTaken.filter((p) => p.idea.status === "backtest"), be);
+  const fwd = summarize(primaryPoints(inBuckets(inRange, "forward")), be);
+  const skipped = summarize(primaryPoints(inBuckets(inRange, "skips")), be);
+  const backtest = summarize(primaryPoints(inBuckets(inRange, "backtest")), be);
 
   if (!all.length) {
     return (
@@ -158,7 +157,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Card>
           <CardHeader
             title="Costliest mistakes"
-            description={mistakeRate != null ? `${fmtPct(mistakeRate)} of taken trades had a mistake · cost = R lost vs the linked alternative` : "R lost per mistake type"}
+            description={mistakeRate != null ? `${fmtPct(mistakeRate)} of taken trades had a mistake · cost = R lost vs the linked alternative · per-type rows overlap, don't add them up` : "R lost per mistake type"}
             action={<Link href="/analytics?group=mistake" className="text-xs text-accent">Analyze →</Link>}
           />
           <ul className="divide-y divide-line px-4 pb-2">
@@ -167,7 +166,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="min-w-0 truncate">{g.name}</span>
                 <span className="flex shrink-0 items-center gap-3 text-xs tabular">
                   <span className="text-faint">×{g.count}</span>
-                  {g.costKnown ? <span className="font-semibold text-loss">−{g.cost.toFixed(2)}R</span> : <span className="text-faint">cost ?</span>}
+                  {g.costKnown < g.count && g.costKnown > 0 && <span className="text-faint">{g.costKnown} of {g.count} measured</span>}
+                  {g.costKnown ? <span className={cn("font-semibold", g.cost > 0 ? "text-loss" : "text-win")}>{fmtCost(g.cost)}</span> : <span className="text-faint" title="No cost entered or measurable yet">—</span>}
                 </span>
               </li>
             ))}
@@ -179,7 +179,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <CardHeader title="At a glance" />
           <dl className="space-y-2.5 px-4 pb-4 text-sm">
             <Row label="Last 7 days" value={<><RValue r={week.count ? week.totalR : null} be={0} /> <span className="text-faint">· {week.count} trades</span></>} />
-            <Row label="Open trades" value={<Link href="/ideas?open=1" className="hover:text-accent">{open.length}</Link>} />
+            <Row label="Open trades" value={<Link href="/ideas?status=taken&open=1" className="hover:text-accent">{open.length}</Link>} />
             <Row label="Followed plan" value={fmtPct(s.followedPlanPct)} />
             <Row
               label="Forward tests"

@@ -6,10 +6,10 @@ import { Gallery } from "@/components/gallery";
 import { IdeaActions } from "@/components/idea-actions";
 import { Badge, Card, CardHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import { BIAS_LABEL, EXIT_LABEL, fmtDateTime, fmtPrice, fmtR, REGIME_LABEL } from "@/lib/format";
-import { getIdea, loadIdeas } from "@/lib/queries";
+import { BIAS_LABEL, EXIT_LABEL, fmtCost, fmtDateTime, fmtPrice, fmtR, REGIME_LABEL } from "@/lib/format";
+import { getIdea, ideaNeighbours } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
-import { sessionOf } from "@/lib/stats";
+import { sessionOf, tradeMistakeCost } from "@/lib/stats";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,10 +24,9 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
   const { beThresholdR, minRR } = getSettings();
 
   // Prev / next in journal order (newest first).
-  const order = loadIdeas().map((i) => i.id);
-  const pos = order.indexOf(idea.id);
-  const newer = pos > 0 ? order[pos - 1] : null;
-  const older = pos >= 0 && pos < order.length - 1 ? order[pos + 1] : null;
+  const { newer, older } = ideaNeighbours(idea);
+  const mistakeTotal = tradeMistakeCost(idea.mistakes);
+  const measured = idea.mistakes.filter((m) => m.cost != null).length;
 
   const primary = idea.primary;
   const checklist = idea.setup?.checklist ?? [];
@@ -164,9 +163,13 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
               <CardHeader
                 title="Mistakes"
                 action={
-                  idea.mistakes.some((m) => m.cost != null) ? (
-                    <span className="text-xs font-semibold text-loss tabular">
-                      cost {idea.mistakes.reduce((n, m) => n + (m.cost ?? 0), 0).toFixed(2)}R
+                  mistakeTotal != null ? (
+                    <span
+                      className={cn("text-xs font-semibold tabular", mistakeTotal > 0 ? "text-loss" : "text-win")}
+                      title="Total for this trade: each alternative counted once, plus manual costs"
+                    >
+                      {fmtCost(mistakeTotal)}
+                      {measured < idea.mistakes.length && <span className="font-normal text-faint"> · {measured} of {idea.mistakes.length} measured</span>}
                     </span>
                   ) : undefined
                 }
@@ -181,7 +184,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
                     </div>
                     {m.cost != null && (
                       <span className={cn("shrink-0 text-xs font-semibold tabular", m.cost > 0 ? "text-loss" : "text-win")}>
-                        {m.cost > 0 ? `−${m.cost.toFixed(2)}R` : `+${Math.abs(m.cost).toFixed(2)}R`}
+                        {fmtCost(m.cost)}
                       </span>
                     )}
                   </li>

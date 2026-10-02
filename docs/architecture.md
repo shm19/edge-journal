@@ -26,7 +26,11 @@ src/
     seed.ts                First-run seed + versioned additive upgrades (SEED_VERSION)
   lib/
     stats.ts               PURE: R math, summarize, groupSummaries, compareScenarios, skipAudit, sessions (DST-aware)
-    queries.ts             Server: loadIdeas() → IdeaView (joins + computed R), filters, DIMENSIONS, comparisons
+    queries.ts             Server (server-only): ALL DB reads. loadIdeas() → IdeaView (joins + computed R), targeted getIdea() (React cache()),
+                           ideaNeighbours() (prev/next in SQL), getSetup, setupIdeaCount, usageCounts, lastSymbol, list* helpers
+    analytics.ts           PURE (types-only import of queries): parseFilters/applyFilters, DIMENSIONS + dimensionKeys, rrBucket,
+                           scenarioComparisons, observationStats, mistakeSummary, tagGroupNames
+    status.ts              PURE: STATUS_BUCKETS (taken / skips / forward / backtest), inBuckets(), isOpen(). The only place that groups statuses
     actions.ts             "use server": all mutations (saveIdea, setups, tags, tag groups, scenario types, settings)
     validation.ts          zod schemas + human-readable errors
     settings.ts            getSettings() with defaults
@@ -41,7 +45,7 @@ scripts/                   backup.sh + backtest pipeline (see docs/backtesting.m
 ```
 
 ## Data flow
-- **Reads.** Server components call `loadIdeas()` (`src/lib/queries.ts`), which loads all rows into memory, joins them and computes R per scenario. Pages then filter with `applyFilters(list, filters, timezone)` and aggregate with `stats.ts`. No client-side data fetching.
+- **Reads.** Server components call `loadIdeas()` (`src/lib/queries.ts`), which loads all rows into memory, joins them and computes R per scenario. Pages then filter with `applyFilters(list, filters)` (`src/lib/analytics.ts`) and aggregate with `stats.ts`. Pages never touch `db` directly: add a function to `queries.ts` instead. Single-idea pages use `getIdea(id)`, which filters the child tables in SQL; prev/next uses `ideaNeighbours()`. `loadIdeas()` stays a full in-memory load for list and analytics pages (fine up to a few thousand ideas; not measured). No client-side data fetching.
 - **Writes.** Client components call server actions in `src/lib/actions.ts`. Each action:
   1. runs `requireAuth()`;
   2. validates with zod;
@@ -53,7 +57,8 @@ scripts/                   backup.sh + backtest pipeline (see docs/backtesting.m
 
 ## Server/client boundaries
 - Files with `"use client"` export **components only** as far as the server is concerned. A constant exported from a client module becomes a client reference on the server, so `METRICS.find` breaks. Shared values go in plain `src/lib/*` modules.
-- `src/db` and `src/lib/{queries,settings,auth}.ts` import `server-only`.
+- `src/db` and `src/lib/{queries,settings,auth}.ts` import `server-only`. `analytics.ts`, `status.ts` and `stats.ts` are pure (no DB), so they are unit-tested without a database; fixtures for them are in `test/fixtures.ts`.
+- **Statuses are grouped only in `status.ts`.** Never compare `idea.status === "..."` in a page; use `inBuckets(list, "taken")` etc. A test fails if an `IDEA_STATUSES` value is in no bucket (or two).
 
 ## Auth
 - `APP_PASSWORD` (env) is compared in constant time.

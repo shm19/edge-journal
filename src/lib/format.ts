@@ -1,9 +1,15 @@
+import type { Bias, ExitReason, IdeaStatus, Regime } from "@/db/schema";
 import { APP_TIMEZONE } from "./tz";
 
 export function fmtR(r: number | null | undefined, digits = 2): string {
   if (r == null || !Number.isFinite(r)) return "—";
   const s = r.toFixed(digits);
   return `${r > 0 ? "+" : ""}${s}R`;
+}
+
+/** Cost of a mistake (positive = R lost) as a signed R amount: lost R is negative, "saved" R positive. */
+export function fmtCost(cost: number | null | undefined, digits = 2): string {
+  return cost == null ? "—" : fmtR(-cost, digits);
 }
 
 export function fmtPct(v: number | null | undefined, digits = 0): string {
@@ -49,7 +55,7 @@ export function rTone(r: number | null | undefined, be = 0.1): "win" | "loss" | 
   return r > 0 ? "win" : "loss";
 }
 
-export const STATUS_LABEL: Record<string, string> = {
+export const STATUS_LABEL: Record<IdeaStatus, string> = {
   taken: "Taken",
   skipped: "Skipped",
   missed: "Missed",
@@ -57,9 +63,9 @@ export const STATUS_LABEL: Record<string, string> = {
   backtest: "Backtest",
 };
 
-export const BIAS_LABEL: Record<string, string> = { with: "With HTF", against: "Against HTF", neutral: "Neutral" };
-export const REGIME_LABEL: Record<string, string> = { range: "Range", trend: "Trend", unclear: "Unclear" };
-export const EXIT_LABEL: Record<string, string> = {
+export const BIAS_LABEL: Record<Bias, string> = { with: "With HTF", against: "Against HTF", neutral: "Neutral" };
+export const REGIME_LABEL: Record<Regime, string> = { range: "Range", trend: "Trend", unclear: "Unclear" };
+export const EXIT_LABEL: Record<ExitReason, string> = {
   target: "Target",
   stop: "Stop",
   invalidation: "Invalidation",

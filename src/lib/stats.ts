@@ -40,6 +40,45 @@ export function stopIsValid(dir: Dir, entry: number, stop: number): boolean {
   return dir === "long" ? stop < entry : stop > entry;
 }
 
+/** Fields of a scenario needed to score it. */
+export interface ScenarioPrices {
+  entry: number;
+  stop: number;
+  exitPrice: number | null;
+  exitReason: string | null;
+}
+
+/**
+ * R a mistake cost, measured as (alternative R − primary R); positive = R was lost, negative = the mistake "saved" R.
+ * Null when either scenario is missing, still open, or has zero risk.
+ */
+export function mistakeCost(dir: Dir, alt: ScenarioPrices | null | undefined, primary: ScenarioPrices | null | undefined): number | null {
+  if (!alt || !primary) return null;
+  const a = scenarioR(dir, alt);
+  const p = scenarioR(dir, primary);
+  return a == null || p == null ? null : a - p;
+}
+
+/**
+ * Total mistake cost of ONE trade. Mistakes measured against the same alternative describe the same lost R, so each
+ * alternative's delta counts once; manually entered costs are independent and always count. Null if nothing is known.
+ */
+export function tradeMistakeCost(mistakes: { costR: number | null; scenarioId: number | null; cost: number | null }[]): number | null {
+  let total = 0;
+  let known = false;
+  const seen = new Set<number>();
+  for (const m of mistakes) {
+    if (m.cost == null) continue;
+    if (m.costR == null && m.scenarioId != null) {
+      if (seen.has(m.scenarioId)) continue;
+      seen.add(m.scenarioId);
+    }
+    total += m.cost;
+    known = true;
+  }
+  return known ? total : null;
+}
+
 export function outcomeOf(r: number | null, beThreshold: number): Outcome {
   if (r == null) return "open";
   if (Math.abs(r) <= beThreshold) return "be";

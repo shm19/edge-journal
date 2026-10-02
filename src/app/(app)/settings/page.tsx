@@ -1,43 +1,15 @@
 import { Download, LogOut } from "lucide-react";
 import { logout } from "@/app/login/actions";
-import { count } from "drizzle-orm";
 import { GeneralSettings, MistakeTypeManager, ScenarioTypeManager, TagManager } from "@/components/settings-forms";
 import { buttonClass, Card, CardHeader, PageHeader } from "@/components/ui";
-import { db } from "@/db";
-import { ideaMistakes, ideaTags, scenarios } from "@/db/schema";
-import { listMistakeTypes, listScenarioTypes, listTags } from "@/lib/queries";
+import { listMistakeTypes, listScenarioTypes, listTags, usageCounts } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 
 export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const settings = getSettings();
-  const tagUsage = Object.fromEntries(
-    db
-      .select({ id: ideaTags.tagId, n: count() })
-      .from(ideaTags)
-      .groupBy(ideaTags.tagId)
-      .all()
-      .map((r) => [r.id, r.n]),
-  );
-  const typeUsage = Object.fromEntries(
-    db
-      .select({ id: scenarios.scenarioTypeId, n: count() })
-      .from(scenarios)
-      .groupBy(scenarios.scenarioTypeId)
-      .all()
-      .filter((r) => r.id != null)
-      .map((r) => [r.id!, r.n]),
-  );
-
-  const mistakeUsage = Object.fromEntries(
-    db
-      .select({ id: ideaMistakes.mistakeTypeId, n: count() })
-      .from(ideaMistakes)
-      .groupBy(ideaMistakes.mistakeTypeId)
-      .all()
-      .map((r) => [r.id, r.n]),
-  );
+  const usage = usageCounts();
 
   return (
     <>
@@ -68,10 +40,10 @@ export default async function SettingsPage() {
               </a>
             </div>
           </Card>
-          <ScenarioTypeManager types={listScenarioTypes()} usage={typeUsage} />
-          <MistakeTypeManager types={listMistakeTypes()} usage={mistakeUsage} />
+          <ScenarioTypeManager types={listScenarioTypes()} usage={usage.scenarioType} />
+          <MistakeTypeManager types={listMistakeTypes()} usage={usage.mistakeType} />
         </div>
-        <TagManager tags={listTags()} usage={tagUsage} />
+        <TagManager tags={listTags()} usage={usage.tag} />
       </div>
     </>
   );

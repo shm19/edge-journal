@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { emptyScenario, type EditorAttachment, type EditorIdea, type EditorMistake, type EditorScenario } from "@/lib/editor-shape";
 import { BIAS_LABEL, EXIT_LABEL, fmtR, REGIME_LABEL, rTone, STATUS_LABEL } from "@/lib/format";
 import { parsePrice } from "@/lib/price";
-import { plannedRR, scenarioR, stopIsValid } from "@/lib/stats";
+import { mistakeCost, plannedRR, scenarioR, stopIsValid } from "@/lib/stats";
 import { isoToZonedInput, zonedInputToIso } from "@/lib/tz";
 import { TypePicker } from "./type-picker";
 import { Badge, Button, Card, CardHeader, Field, Input, Segmented, Select, Textarea } from "./ui";
@@ -1096,16 +1096,12 @@ function QuickExit({ children, onClick, disabled }: { children: React.ReactNode;
   );
 }
 
-/** Alternative R − primary R for a mistake linked to that alternative (positive = the mistake cost R). */
+/** Cost of a mistake linked to `alt` (shared rule: `mistakeCost` in stats.ts), from the editor's string fields. */
 function rDelta(dir: Dir, alt: EditorScenario, primary: EditorScenario | undefined): number | null {
-  if (!primary) return null;
-  const r = (x: EditorScenario) => {
+  const prices = (x: EditorScenario) => {
     const entry = parsePrice(x.entry);
     const stop = parsePrice(x.stop);
-    if (entry == null || stop == null) return null;
-    return scenarioR(dir, { entry, stop, exitPrice: parsePrice(x.exitPrice), exitReason: x.exitReason || null });
+    return entry == null || stop == null ? null : { entry, stop, exitPrice: parsePrice(x.exitPrice), exitReason: x.exitReason || null };
   };
-  const a = r(alt);
-  const p = r(primary);
-  return a == null || p == null ? null : a - p;
+  return mistakeCost(dir, prices(alt), primary && prices(primary));
 }

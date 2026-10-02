@@ -38,7 +38,7 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | Command | Purpose |
 |---|---|
 | `npm run dev` | Dev server (or `preview_start edge-journal-dev`, configured in `../.claude/launch.json`, on port 3100 with data in `.data-dev`) |
-| `npm test` | Vitest: `src/lib/*.test.ts` (R math, stats, price parsing, timezones) |
+| `npm test` | Vitest: `src/lib/*.test.ts` (R math, stats, analytics, status buckets, price parsing, timezones) plus DB-backed tests (`queries.test.ts`, `actions.test.ts`; `test/db.ts` gives each a temp DB, `test/fixtures.ts` builds `IdeaView`s without one) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint. React-compiler rules are on: no `setState` in effects, no ref reads during render |
 | `npm run build` | Production build (standalone output) |
@@ -83,11 +83,13 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | Task | Files |
 |---|---|
 | New field on ideas or scenarios | `src/db/schema.ts` → migration → `src/lib/validation.ts` → `src/lib/actions.ts` (`saveIdea`) → `src/lib/editor-shape.ts` → `src/components/idea-editor.tsx` → `src/app/(app)/ideas/[id]/page.tsx` → CSV in `src/app/api/export/route.ts` |
-| Mistakes | `mistakeTypes` / `ideaMistakes` (`schema.ts`), `MistakeView` + `mistakeSummary()` (`queries.ts`), the Mistakes card in `idea-editor.tsx`, `TypeManager kind="mistake"` (`settings-forms.tsx`) |
+| Mistakes | `mistakeTypes` / `ideaMistakes` (`schema.ts`), `MistakeView` (`queries.ts`), `mistakeSummary()` (`analytics.ts`), cost rules `mistakeCost()` / `tradeMistakeCost()` (`stats.ts`, see data-model.md), the Mistakes card in `idea-editor.tsx`, `TypeManager kind="mistake"` (`settings-forms.tsx`) |
 | "Pick or create a type" UI (alternatives, mistakes) | `src/components/type-picker.tsx` |
-| New analytics "group by" | `DIMENSIONS` + `dimensionKeys()` in `src/lib/queries.ts` |
+| New analytics "group by" | `DIMENSIONS` + `dimensionKeys()` in `src/lib/analytics.ts` (pure; add a case to `analytics.test.ts`) |
+| A new DB read for a page | A function in `src/lib/queries.ts` (server-only). Pages must not import `@/db`. Pure filtering/grouping goes in `src/lib/analytics.ts`. |
+| Group statuses / "open" | `src/lib/status.ts` only (`STATUS_BUCKETS`, `inBuckets`, `isOpen`) |
 | New metric | `Summary` / `summarize()` in `src/lib/stats.ts` (with a test) and `src/lib/metrics.ts` |
-| New status | `IDEA_STATUSES` (`schema.ts`), `STATUS_LABEL` (`format.ts`), `STATUS_COLOR` (`components/bits.tsx`). Then decide where it's counted: the dashboard and setup pages filter by status explicitly. |
+| New status | `IDEA_STATUSES` (`schema.ts`), `STATUS_LABEL` (`format.ts`), `STATUS_COLOR` (`components/bits.tsx`; both are `Record<IdeaStatus, …>` so a missing entry fails the type-check), and put it in a bucket in `src/lib/status.ts` (`status.test.ts` fails until you do). |
 | Seed data (setups, tags, scenario types) | `src/db/seed.ts` |
 | Navigation | `src/components/nav.tsx` (desktop sidebar only) |
 | UI primitives | `src/components/ui.tsx` (Button, Input, Select, Field, Card, Badge, Segmented, …), `src/components/bits.tsx` (RValue, badges, Kpi, Markdown) |

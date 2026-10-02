@@ -6,8 +6,10 @@ import { FilterBar } from "@/components/filter-bar";
 import { IdeaTable } from "@/components/idea-table";
 import { EmptyState, LinkButton, PageHeader } from "@/components/ui";
 import { fmtPct } from "@/lib/format";
-import { applyFilters, listSetups, listTags, loadIdeas, parseFilters, primaryPoints } from "@/lib/queries";
+import { applyFilters, parseFilters, primaryPoints } from "@/lib/analytics";
+import { listSetups, listTags, loadIdeas } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
+import { inBuckets, isOpen } from "@/lib/status";
 import { summarize } from "@/lib/stats";
 
 export const metadata = { title: "Journal" };
@@ -19,8 +21,9 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
   const filters = parseFilters(sp);
   const list = applyFilters(all, filters);
   // Real results only: the summary bar never mixes in skipped / missed / forward-test / backtest R.
-  const summary = summarize(primaryPoints(list.filter((i) => i.status === "taken")), settings.beThresholdR);
-  const openCount = list.filter((i) => i.status === "taken" && i.primary && i.primary.r == null).length;
+  const takenList = inBuckets(list, "taken");
+  const summary = summarize(primaryPoints(takenList), settings.beThresholdR);
+  const openCount = takenList.filter(isOpen).length;
   const symbols = [...new Set([...settings.symbols, ...all.map((i) => i.symbol)])].sort();
 
   return (
