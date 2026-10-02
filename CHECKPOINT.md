@@ -264,7 +264,7 @@ Reason: all times should be UTC. There should be no setting and no banner.
 - [x] 5 Typecheck, lint, 41 tests and build green. No new tests: the change is CSS classes and deleted markup, and the e2e smoke test comes in Step 3b.
 - [x] 6 Docs: AGENTS, architecture, README, CHANGELOG.
 - [x] 7 Browser at 1024 px: editor (two columns, sticky save bar), journal, dashboard; no console errors.
-- [x] 8 Committed.
+- [x] 8 Committed: `ce451ad`
 
 **What was done:** deleted the mobile bottom bar and `MobileItem`, the journal's mobile card list and the editor's `contents`/`order-*` reordering. The sidebar is always shown. The app shell has `min-w-[1024px]`, so `sm:`/`md:`/`lg:` are always on and were collapsed to unconditional classes; `xl:` is kept. `/login` stays responsive.
 
