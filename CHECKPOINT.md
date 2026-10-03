@@ -90,7 +90,7 @@ Every step must also pass the usual checks: `npm test`, `typecheck`, `lint`, `bu
 
 **After Step 3b:** coverage must not drop below the thresholds.
 
-**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → ~~3b~~ → 5 → 6 → 7. (Step 0 is done.)
+**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → ~~3b~~ → ~~5~~ → 5 → 6 → 7. (Step 0 is done.)
 
 **Process for every step and change:** follow [docs/workflow.md](docs/workflow.md).
 1. Scope.
@@ -447,7 +447,26 @@ Add `npm run e2e`.
   - Unit tests for queries, validation and mistake costs.
 - **Done when:** the agreed items are done, behavior is unchanged, and everything is green.
 
-### ☐ Step 5: Better dropdown component
+### ☑ Step 5: Better dropdown component (done 2026-10-03)
+**In one line:** the plain browser dropdowns are replaced by one styled dropdown you can search by typing and use from the keyboard.
+
+**Workflow checklist:**
+- [x] 1 Scope: below.
+- [x] 2 Built with Shayan's lazy-developer skill. Rung 5 (installed dependency): nothing suitable was in `node_modules`, so `@radix-ui/react-popover` 1.1.23 and `cmdk` 1.1.1 were added (the plan's recommendation). One `Select` keeps the old `<select>` API, so call sites barely changed.
+- [x] 3a Code review: no P0; 4 P1 (missing Select unit tests, selected option not exposed to screen readers, search matching the hidden index, ARIA wiring), 10 P2.
+- [x] 3b Product review (code only; the reviewer's browser was blocked): no P0; 3 P1 (Tab in the open list, typing on the closed trigger, digits in search), 7 P2.
+- [x] 4 Triage: all P1 and the cheap P2 applied (see below).
+- [x] 5 `npm run check` green (362 tests, 26 files; 19 new in `src/components/ui/select.test.tsx`); `npm run e2e` 17/17.
+- [x] 6 Docs: AGENTS, architecture (Dropdowns), testing, CHANGELOG.
+- [x] 7 Browser (1280 px): setup dropdown opens by mouse, shows Live / Testing groups, search filters ("ins" leaves two setups), Enter picks, no console errors.
+- [x] 8 Committed (see `git log`).
+
+**Notes:**
+- The first builder reported a `select.test.tsx` that did not exist; the review caught it and the tests were then written. Always check claimed tests exist.
+- Behaviour: lists over 8 options get a search box; with 8 or fewer, typing still jumps to a match. Tab closes the list and returns focus to the trigger. Typing on a closed trigger opens it. Active filters in the filter bar get an accent. The empty option ("All setups") shows no check mark. The popover flips before sliding under the Save bar.
+- Not done: the Analytics "Group by" / "Chart" selects have no active accent (they always have a value). Popover flip and collision are Radix behaviour and untested in jsdom. `npm audit` reports vulnerabilities in the tree (not investigated).
+
+**Original plan:**
 - Replace the native `<select>` (styled `Select` in `src/components/ui.tsx`) with a custom component in `src/components/ui/select.tsx` (or similar). It needs:
   - a styled trigger and a popover list;
   - option groups (setups by status, tags by group);

@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { cn } from "@/lib/cn";
 import { METRICS } from "@/lib/metrics";
+import { Select } from "./ui";
 
 
 export function AnalyticsControls({
@@ -26,7 +27,6 @@ export function AnalyticsControls({
     next.set(k, v);
     start(() => router.replace(`${pathname}?${next}`, { scroll: false }));
   };
-  const sel = "h-8 rounded-lg border border-line bg-panel-2 px-2 text-xs text-fg";
 
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -49,21 +49,21 @@ export function AnalyticsControls({
       {tab === "breakdown" && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
           Group by
-          <select className={sel} value={group} onChange={(e) => set("group", e.target.value)} aria-label="Group by">
+          <Select size="sm" value={group} onChange={(e) => set("group", e.target.value)} aria-label="Group by">
             {dimensions.map((d) => (
               <option key={d.key} value={d.key}>
                 {d.label}
               </option>
             ))}
-          </select>
+          </Select>
           Chart
-          <select className={sel} value={metric} onChange={(e) => set("metric", e.target.value)} aria-label="Metric">
+          <Select size="sm" value={metric} onChange={(e) => set("metric", e.target.value)} aria-label="Metric">
             {METRICS.map((m) => (
               <option key={m.key} value={m.key}>
                 {m.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
     </div>

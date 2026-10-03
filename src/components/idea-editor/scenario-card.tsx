@@ -6,7 +6,7 @@ import type { EditorScenario } from "@/lib/editor-shape";
 import { EXIT_LABEL, fmtR, rTone } from "@/lib/format";
 import { parsePrice } from "@/lib/price";
 import { plannedRR, scenarioR, stopIsValid, type Dir } from "@/lib/stats";
-import { Badge } from "../ui";
+import { Badge, Select } from "../ui";
 
 export function ScenarioCard({
   s,
@@ -51,10 +51,10 @@ export function ScenarioCard({
           {title ? (
             <span className="text-sm font-semibold text-fg">{title}</span>
           ) : (
-            <select
+            <Select
               value={s.scenarioTypeId ?? ""}
               onChange={(e) => onChange({ scenarioTypeId: e.target.value ? Number(e.target.value) : null })}
-              className="max-w-44 rounded-md border border-line bg-panel px-2 py-1 text-sm font-medium"
+              size="sm" className="w-auto max-w-44 font-medium"
               aria-label={`Alternative ${index} type`}
             >
               <option value="">Untyped alternative</option>
@@ -63,7 +63,7 @@ export function ScenarioCard({
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
           {rr != null && (
             <Badge className={rr < minRR ? "border-amber-500/40 bg-amber-500/10 text-warn" : undefined} title="Planned reward:risk to target">
@@ -123,10 +123,10 @@ export function ScenarioCard({
           <QuickExit onClick={() => onChange({ exitPrice: "", exitReason: "not_filled" })}>Not filled</QuickExit>
         )}
         <QuickExit onClick={() => onChange({ exitPrice: "", exitReason: "" })}>Still open</QuickExit>
-        <select
+        <Select
           value={s.exitReason}
           onChange={(e) => onChange({ exitReason: e.target.value })}
-          className="ml-auto rounded-md border border-line bg-panel px-2 py-1 text-xs text-muted"
+          size="sm" className="ml-auto w-auto"
           aria-label="Exit reason"
         >
           <option value="">Exit reason…</option>
@@ -135,7 +135,7 @@ export function ScenarioCard({
               {EXIT_LABEL[x]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <input
         value={s.notes}

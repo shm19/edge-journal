@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { fmtCost } from "@/lib/format";
 import { editorMistakeCost, newKey, parseCost, type EditorIdea, type EditorMistake } from "@/lib/editor-shape";
 import { TypePicker } from "../type-picker";
-import { Badge, Card, CardHeader } from "../ui";
+import { Badge, Card, CardHeader, Select } from "../ui";
 
 export function MistakesCard({
   idea,
@@ -74,10 +74,10 @@ export function MistakesCard({
               />
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <Link2 className="h-3.5 w-3.5 text-faint" />
-                <select
+                <Select
                   value={m.scenarioKey ?? ""}
                   onChange={(e) => updateMistake(m.key, { scenarioKey: e.target.value || null })}
-                  className="h-7 rounded-md border border-line bg-panel px-1.5 text-xs text-muted"
+                  size="sm" className="w-auto max-w-64"
                   aria-label="Measure against alternative"
                 >
                   <option value="">{alternatives.length ? "Measure against an alternative…" : "No alternatives yet"}</option>
@@ -86,7 +86,7 @@ export function MistakesCard({
                       {scenarioTypes.find((t) => t.id === x.scenarioTypeId)?.name ?? `Alternative #${i + 1}`}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <span className="text-faint">or cost</span>
                 <input
                   inputMode="decimal"

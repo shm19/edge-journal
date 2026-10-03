@@ -4,7 +4,7 @@ import { Loader2, Plus, Settings2, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
-import { Button, Input } from "./ui";
+import { Button, Input, Select } from "./ui";
 
 export interface PickableType {
   id: number;
@@ -107,12 +107,13 @@ export function TypePicker({
 
       {!creating ? (
         <div className="flex flex-wrap gap-2">
-          <select
+          <Select
             value=""
             onChange={(e) => {
               if (e.target.value) onPick(Number(e.target.value));
             }}
-            className="h-8 min-w-0 flex-1 rounded-md border border-line bg-panel px-2 text-xs text-muted"
+            size="sm"
+            className="min-w-0 flex-1"
             aria-label={`${label}: choose a saved type`}
           >
             <option value="">All saved types…</option>
@@ -122,7 +123,7 @@ export function TypePicker({
                 {t.description ? ` — ${t.description.slice(0, 60)}` : ""}
               </option>
             ))}
-          </select>
+          </Select>
           <Button size="sm" onClick={() => setCreating(true)}>
             <Plus className="h-3.5 w-3.5" /> New type
           </Button>

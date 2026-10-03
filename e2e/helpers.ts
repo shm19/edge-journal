@@ -59,3 +59,9 @@ export async function saveIdea(page: Page) {
 export const kpi = (page: Page, label: string) => page.locator("p", { hasText: new RegExp(`^${label}$`) }).locator("..");
 
 export const acceptNextDialog = (page: Page) => page.once("dialog", (d) => void d.accept());
+
+/** Open the custom Select with this label and pick an option by its visible text. */
+export async function chooseOption(page: Page, label: string, option: string) {
+  await page.getByLabel(label, { exact: true }).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}

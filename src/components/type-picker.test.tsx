@@ -2,6 +2,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { chooseOption } from "../../test/select";
 import { TypePicker } from "./type-picker";
 
 const types = [
@@ -27,7 +28,7 @@ describe("TypePicker", () => {
 
   it("picks a saved type from the dropdown", async () => {
     const { onPick, user } = setup();
-    await user.selectOptions(screen.getByLabelText("Add an alternative: choose a saved type"), "1");
+    await chooseOption(user, "Add an alternative: choose a saved type", /^BE stop/);
     expect(onPick).toHaveBeenCalledWith(1);
   });
 

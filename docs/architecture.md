@@ -80,6 +80,7 @@ scripts/                   backup.sh + backtest pipeline (see docs/backtesting.m
 - **UI:**
   - Use the tokens: `bg-panel`, `border-line`, `text-muted`, `text-faint`, `text-win`, `text-loss`, `accent`.
   - Use the primitives from `components/ui.tsx`.
+  - **Dropdowns:** always `Select` (`components/ui/select.tsx`, re-exported from `ui`), never a raw `<select>`. It keeps the native API (`<option>` / `<optgroup>` children, `value`, `onChange(e)` with `e.target.value`, `id`, `aria-label`, `disabled`, plus `size="sm"` and `name`), renders a `role=combobox` button and a cmdk listbox in a Radix Popover (flip and collision handling, outside click, focus returns to the trigger). Search (label only) shows above 8 options; shorter lists get type-ahead. A printable key on the closed trigger opens the list and seeds the query ("H1" works like a native select). Tab inside the list commits nothing: it closes the list and focus returns to the trigger. Cmd/Ctrl+Enter is ignored inside it so the editor save shortcut still works. `active` accents the trigger (used by the filter bar for non-empty filters). The popover keeps 72px of bottom collision padding so it flips before sliding under the sticky Save bar.
   - Empty values render "—", never 0. `Summary.totalR` is `null` for an empty sample; a real zero (e.g. max drawdown of an all-win sample) renders `0.00R`.
   - A tag group with no tag on an idea groups under "No tag" (`NO_TAG`), not "—".
   - Destructive actions check `res.ok` and show the error; they only navigate away on success.

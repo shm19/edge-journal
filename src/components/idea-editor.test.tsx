@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyScenario, newEditorIdea, type EditorIdea } from "@/lib/editor-shape";
 import { makeSetup } from "../../test/fixtures";
+import { chooseOption } from "../../test/select";
 
 const push = vi.fn();
 const refresh = vi.fn();
@@ -224,13 +225,13 @@ describe("mistake cost", () => {
   it("measures the linked alternative against the primary", async () => {
     const user = await withAlternative();
     expect(screen.queryByText(/(lost|saved)$/)).not.toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText("Measure against alternative"), "Hold to target");
+    await chooseOption(user, "Measure against alternative", "Hold to target");
     expect(screen.getByText(/3\.00R lost$/)).toBeInTheDocument(); // +2R - (-1R)
   });
 
   it("a typed cost wins, and a saving shows as 'saved'", async () => {
     const user = await withAlternative();
-    await user.selectOptions(screen.getByLabelText("Measure against alternative"), "Hold to target");
+    await chooseOption(user, "Measure against alternative", "Hold to target");
     await user.type(screen.getByLabelText("Cost in R"), "-0.5");
     expect(screen.getByText(/0\.50R saved$/)).toBeInTheDocument();
   });
@@ -246,10 +247,10 @@ describe("mistake cost", () => {
 
   it("unlinks the mistake when its alternative is removed", async () => {
     const user = await withAlternative();
-    await user.selectOptions(screen.getByLabelText("Measure against alternative"), "Hold to target");
+    await chooseOption(user, "Measure against alternative", "Hold to target");
     await user.click(screen.getByRole("button", { name: "Remove alternative" }));
     expect(screen.queryByText(/(lost|saved)$/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Measure against alternative")).toHaveValue("");
+    expect(screen.getByLabelText("Measure against alternative")).toHaveTextContent("No alternatives yet");
   });
 });
 
@@ -322,21 +323,21 @@ describe("cancel and setup change", () => {
     const initial = { ...newEditorIdea({ symbol: "BTC", setupId: 1 }), checklistState: { "At level": true } };
     const user = renderEditor(initial, { setups: [lhpb, other] });
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    await user.selectOptions(screen.getByLabelText("Setup"), "2");
+    await chooseOption(user, "Setup", "Other");
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining("1 ticked checklist item"));
-    expect(screen.getByLabelText("Setup")).toHaveValue("1"); // unchanged
+    expect(screen.getByLabelText("Setup")).toHaveTextContent("LHPB"); // unchanged
     expect(within(screen.getByText("Setup checklist").closest("div")!.parentElement!).getByText("1/2")).toBeInTheDocument();
 
     confirm.mockReturnValue(true);
-    await user.selectOptions(screen.getByLabelText("Setup"), "2");
-    expect(screen.getByLabelText("Setup")).toHaveValue("2");
+    await chooseOption(user, "Setup", "Other");
+    expect(screen.getByLabelText("Setup")).toHaveTextContent("Other");
   });
 
   it("does not ask when nothing is ticked", async () => {
     const lhpb = makeSetup({ id: 1, name: "LHPB", checklist: ["At level"] });
     const confirm = vi.spyOn(window, "confirm");
     const user = renderEditor(newEditorIdea({ symbol: "BTC", setupId: 1 }), { setups: [lhpb, makeSetup({ id: 2, name: "Other" })] });
-    await user.selectOptions(screen.getByLabelText("Setup"), "2");
+    await chooseOption(user, "Setup", "Other");
     expect(confirm).not.toHaveBeenCalled();
   });
 });

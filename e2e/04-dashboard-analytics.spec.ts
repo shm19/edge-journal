@@ -1,4 +1,4 @@
-import { authed as test, expect, kpi } from "./helpers";
+import { authed as test, chooseOption, expect, kpi } from "./helpers";
 
 // Data from 02/03: taken BTC -1R and ETH +3R; a skipped (+1.5R), a forward-test Hit and a Miss that must NOT count.
 test("dashboard KPIs match the hand-calculated numbers (taken only)", async ({ page }) => {
@@ -17,13 +17,13 @@ test("analytics: group-by changes the table", async ({ page }) => {
   const table = page.getByRole("table");
   await expect(table.getByRole("columnheader", { name: "Setup" })).toBeVisible();
 
-  await page.getByLabel("Group by").selectOption({ label: "Coin" });
+  await chooseOption(page, "Group by", "Coin");
   await expect(page).toHaveURL(/group=symbol/);
   await expect(table.getByRole("columnheader", { name: "Coin" })).toBeVisible();
   await expect(table.getByRole("row", { name: /^BTC/ })).toContainText("-1.00R");
   await expect(table.getByRole("row", { name: /^ETH/ })).toContainText("+3.00R");
 
-  await page.getByLabel("Group by").selectOption({ label: "Mistake" });
+  await chooseOption(page, "Group by", "Mistake");
   await expect(table.getByRole("row", { name: /Entered early/ })).toBeVisible();
 });
 

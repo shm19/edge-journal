@@ -11,6 +11,7 @@ All notable changes are recorded here, following [Keep a Changelog](https://keep
 - New attachments must exist in the uploads dir and not be used by another idea (P2-7); the `db` backup export is staged in a private temp dir with 0600 permissions (P2-16).
 
 ### Added
+- One custom, searchable, keyboard-accessible `Select` (Radix Popover + cmdk, `src/components/ui/select.tsx`) replaces every native `<select>`: option groups, search above 8 options, type-ahead, arrows / Home / End / Enter / Esc, combobox + listbox roles, viewport-aware positioning (Step 5). New dependencies `@radix-ui/react-popover` and `cmdk`. Search matches labels only; Tab closes the list without committing; a printable key on the closed trigger opens it and seeds type-ahead; the current option is exposed to screen readers; a non-empty filter in the filter bar gets an accent border; `src/components/ui/select.test.tsx` (19 tests).
 - Component tests (React Testing Library): idea editor (live R and R:R, price echo, quick exits, not filled, observation mode, mistake cost, double-submit guard, cancel, setup change), type picker, filter bar Clear, breakdown list, idea actions; pure tests for the editor rules and formatters.
 - Warning before changing the Setup would clear ticked checklist items; confirmation before Hit / Miss drops scenarios that have prices.
 - Empty states: Analytics with an empty journal, Setups (with a "Create your first setup" button), and a dashboard range with no closed trades.

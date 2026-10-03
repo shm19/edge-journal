@@ -15,8 +15,10 @@
     "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run build"
   },
   "dependencies": {
+    "@radix-ui/react-popover": "^1.1.23",
     "better-sqlite3": "^13.0.3",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "drizzle-orm": "^0.45.3",
     "jose": "^6.2.12",
     "lucide-react": "^1.50.0",

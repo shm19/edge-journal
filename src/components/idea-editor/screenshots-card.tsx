@@ -2,7 +2,7 @@ import { ImagePlus, Loader2, X } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/cn";
 import type { EditorAttachment } from "@/lib/editor-shape";
-import { Button, Card, CardHeader } from "../ui";
+import { Button, Card, CardHeader, Select } from "../ui";
 
 export function ScreenshotsCard({
   attachments,
@@ -58,16 +58,16 @@ export function ScreenshotsCard({
               </button>
             </div>
             <div className="space-y-1.5 p-2">
-              <select
+              <Select
                 value={a.kind}
                 aria-label="When was this screenshot taken"
                 onChange={(e) => patch(a.key, { kind: e.target.value as EditorAttachment["kind"] })}
-                className="w-full rounded border border-line bg-panel px-1.5 py-1 text-xs"
+                size="sm"
               >
                 <option value="before">Before</option>
                 <option value="during">During</option>
                 <option value="after">After</option>
-              </select>
+              </Select>
               <input
                 value={a.caption}
                 placeholder="Caption"

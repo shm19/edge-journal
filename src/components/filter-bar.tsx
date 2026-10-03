@@ -7,6 +7,7 @@ import type { Setup, Tag } from "@/db/schema";
 import { BIASES, IDEA_STATUSES, TIMEFRAMES } from "@/db/schema";
 import { cn } from "@/lib/cn";
 import { BIAS_LABEL, STATUS_LABEL } from "@/lib/format";
+import { Select } from "./ui";
 
 const sel = "h-8 rounded-lg border border-line bg-panel-2 px-2 text-xs text-fg focus:outline-none focus:border-accent/60";
 
@@ -81,23 +82,23 @@ export function FilterBar({
           })}
         </div>
       )}
-      <select className={sel} value={sp.get("setup") ?? ""} onChange={(e) => update({ setup: e.target.value })} aria-label="Setup">
+      <Select size="sm" active={(sp.get("setup") ?? "") !== ""} value={sp.get("setup") ?? ""} onChange={(e) => update({ setup: e.target.value })} aria-label="Setup">
         <option value="">All setups</option>
         {setups.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
           </option>
         ))}
-      </select>
-      <select className={sel} value={sp.get("symbol") ?? ""} onChange={(e) => update({ symbol: e.target.value })} aria-label="Coin">
+      </Select>
+      <Select size="sm" active={(sp.get("symbol") ?? "") !== ""} value={sp.get("symbol") ?? ""} onChange={(e) => update({ symbol: e.target.value })} aria-label="Coin">
         <option value="">All coins</option>
         {symbols.map((s) => (
           <option key={s} value={s}>
             {s}
           </option>
         ))}
-      </select>
-      <select className={sel} value={sp.get("tag") ?? ""} onChange={(e) => update({ tag: e.target.value })} aria-label="Tag">
+      </Select>
+      <Select size="sm" active={(sp.get("tag") ?? "") !== ""} value={sp.get("tag") ?? ""} onChange={(e) => update({ tag: e.target.value })} aria-label="Tag">
         <option value="">Any tag</option>
         {tagGroups.map((g) => (
           <optgroup key={g} label={g}>
@@ -110,28 +111,28 @@ export function FilterBar({
               ))}
           </optgroup>
         ))}
-      </select>
-      <select className={sel} value={sp.get("tf") ?? ""} onChange={(e) => update({ tf: e.target.value })} aria-label="Timeframe">
+      </Select>
+      <Select size="sm" active={(sp.get("tf") ?? "") !== ""} value={sp.get("tf") ?? ""} onChange={(e) => update({ tf: e.target.value })} aria-label="Timeframe">
         <option value="">Any TF</option>
         {TIMEFRAMES.map((t) => (
           <option key={t} value={t}>
             {t}
           </option>
         ))}
-      </select>
-      <select className={sel} value={sp.get("bias") ?? ""} onChange={(e) => update({ bias: e.target.value })} aria-label="HTF bias">
+      </Select>
+      <Select size="sm" active={(sp.get("bias") ?? "") !== ""} value={sp.get("bias") ?? ""} onChange={(e) => update({ bias: e.target.value })} aria-label="HTF bias">
         <option value="">Any bias</option>
         {BIASES.map((b) => (
           <option key={b} value={b}>
             {BIAS_LABEL[b]}
           </option>
         ))}
-      </select>
-      <select className={sel} value={sp.get("dir") ?? ""} onChange={(e) => update({ dir: e.target.value })} aria-label="Direction">
+      </Select>
+      <Select size="sm" active={(sp.get("dir") ?? "") !== ""} value={sp.get("dir") ?? ""} onChange={(e) => update({ dir: e.target.value })} aria-label="Direction">
         <option value="">Long & short</option>
         <option value="long">Long</option>
         <option value="short">Short</option>
-      </select>
+      </Select>
       <input type="date" className={sel} value={sp.get("from") ?? ""} onChange={(e) => update({ from: e.target.value })} aria-label="From" />
       <input type="date" className={sel} value={sp.get("to") ?? ""} onChange={(e) => update({ to: e.target.value })} aria-label="To" />
       <div className="relative">

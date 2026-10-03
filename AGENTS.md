@@ -98,5 +98,5 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | New status | `IDEA_STATUSES` (`schema.ts`), `STATUS_LABEL` (`format.ts`), `STATUS_COLOR` (`components/bits.tsx`; both are `Record<IdeaStatus, …>` so a missing entry fails the type-check), and put it in a bucket in `src/lib/status.ts` (`status.test.ts` fails until you do). |
 | Seed data (setups, tags, scenario types) | `src/db/seed.ts` |
 | Navigation | `src/components/nav.tsx` (desktop sidebar only) |
-| UI primitives | `src/components/ui.tsx` (Button, Input, Select, Field, Card, Badge, Segmented, …), `src/components/bits.tsx` (RValue, badges, Kpi, Markdown) |
+| UI primitives | `src/components/ui.tsx` (Button, Input, Field, Card, Badge, Segmented, …; re-exports `Select`), `src/components/ui/select.tsx` (the one dropdown: Radix Popover + cmdk, native-`<select>` API, no raw `<select>` in the app; test helper `test/select.ts`, e2e helper `chooseOption`), `src/components/bits.tsx` (RValue, badges, Kpi, Markdown) |
 | Charts | `src/components/charts.tsx` (Recharts, client) |

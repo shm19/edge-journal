@@ -1,4 +1,4 @@
-import { authed as test, expect, fillPrices, newIdea, saveIdea, TINY_PNG } from "./helpers";
+import { authed as test, chooseOption, expect, fillPrices, newIdea, saveIdea, TINY_PNG } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -9,14 +9,14 @@ test("taken trade with alternative, linked mistake and screenshot", async ({ pag
 
   // Alternative "BE stop": a copy of the primary, closed at breakeven = 0R.
   await page.getByRole("button", { name: "Add BE stop" }).click();
-  await expect(page.getByLabel("Alternative 1 type")).toHaveValue(/\d+/);
+  await expect(page.getByLabel("Alternative 1 type")).toHaveText("BE stop");
   await page.getByRole("button", { name: "Breakeven" }).nth(1).click();
 
   // Mistake type created inline (second "New type" on the page; the first belongs to alternatives).
   await page.getByRole("button", { name: "New type" }).last().click();
   await page.getByLabel("New type name").fill("Entered early");
   await page.getByRole("button", { name: "Create & add" }).click();
-  await page.getByLabel("Measure against alternative").selectOption({ label: "BE stop" });
+  await chooseOption(page, "Measure against alternative", "BE stop");
   await expect(page.getByTitle("R lost because of this mistake")).toContainText("-1.00R lost");
   await page.getByLabel("Mistake note").fill("Entered before the candle closed");
 
