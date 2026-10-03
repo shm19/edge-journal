@@ -5,6 +5,12 @@ All notable changes are recorded here, following [Keep a Changelog](https://keep
 > **About the history before v0.1.0.** The app was built (2026-10-02, sessions 1–4) before a git repository existed. The commits up to the `v0.1.0` tag are **milestone commits reconstructed from the final state**: the files were grouped by area in dependency order, so `git log` tells the story. Commit timestamps are the time of the reconstruction, not when the work was done. Intermediate commits may not build on their own. `v0.1.0` and every commit after it build and pass the checks. From v0.1.0 on, every plan step and change follows [docs/workflow.md](docs/workflow.md) and gets its own commit(s).
 
 ## [Unreleased]
+### Added
+- Git hooks (`.githooks/`, install with `npm run hooks`): pre-commit runs lint, typecheck and the unit tests; pre-push runs the full check, build and e2e. `npm run verify` runs the full gate by hand. Tested in `src/git-hooks.test.ts`.
+
+### Changed
+- `tsconfig.json` is committed in the format Next rewrites it to, so a build no longer leaves the working tree dirty.
+
 
 ## [0.2.0] - 2026-10-03
 **Upgrading:** this release invalidates all existing sessions once (the session signing key now also depends on `APP_PASSWORD`), so everyone logs in again. Migration `0003` is additive and runs automatically; the app first writes a `pre-migrate-*.db` copy.

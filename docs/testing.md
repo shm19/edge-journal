@@ -19,6 +19,13 @@ Config: `vitest.config.mts` (`.mts` so Vite loads it as ESM). `testTimeout` is 3
 | Auth | `src/lib/auth.test.ts`, `session.test.ts`, `login-guard.test.ts`, `src/proxy.test.ts` | `next/headers` and `next/navigation` mocked. |
 | Components | `src/components/ui/select.test.tsx` tests `Select` itself (19 tests) and `src/components/ui/date-picker.test.tsx` the calendar pickers (50 tests, `Date` faked to 2026-10-02 23:30 UTC), `src/components/nav.test.tsx` the "n" shortcut (3 tests), `src/app/error-pages.test.tsx` (error, global-error, not-found; 4 tests); `src/components/balance-form.test.tsx` (form + results, 18 tests) and `balance-card.test.tsx` (4 tests); `src/components/idea-table.test.tsx` (journal / setup / dashboard table columns and the "if taken" label, 5 tests), `setup-editor.test.tsx` (name helper, 2 tests), `src/app/globals.test.ts` (button colours meet 4.5:1, 2 tests); suite total **723 tests in 44 files** (last full run, 2026-10-03); `src/components/**/*.test.tsx` (`test/select.ts` `chooseOption(user, label, option)` drives the custom `Select`; `test/setup-dom.ts` polyfills `ResizeObserver` and `scrollIntoView`) | `// @vitest-environment jsdom`, React Testing Library; `test/setup-dom.ts` adds jest-dom matchers. |
 
+## Git hooks (run the tests without the model)
+Install once per clone with `npm run hooks` (sets `core.hooksPath` to `.githooks/`).
+- **pre-commit:** lint, typecheck and the unit/component tests (`src/deploy-scripts.test.ts` and `src/scripts.test.ts` are excluded: they take ~90 s). About a minute. A docs-only commit (`*.md`, `docs/`) skips everything. It checks the working tree, not the staged snapshot.
+- **pre-push:** `npm run check` (lint, typecheck, coverage thresholds, production build) and then `npm run e2e`. A few minutes.
+- Bypass once with `git commit --no-verify` / `git push --no-verify`. The hooks print one line per step and the tail of the output on a failure.
+- The hooks are tested in `src/git-hooks.test.ts` (stub `npm`/`npx` in a throwaway repo).
+
 ## Temp-DB helper: `tempDb` (`test/db.ts`)
 The DB opens lazily and caches its connection, so each test file does:
 ```ts

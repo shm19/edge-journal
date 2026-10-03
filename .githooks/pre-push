@@ -1,0 +1,9 @@
+#!/bin/sh
+# Full gate before a push: lint, typecheck, all unit tests with coverage thresholds, production build, then e2e (Playwright).
+HOOK_NAME=pre-push
+. "$(dirname "$0")/lib.sh"
+
+echo "pre-push: full check + e2e (a few minutes)"
+step "check (lint, typecheck, coverage, build)" npm run check --silent
+step "e2e (Playwright)" npm run e2e --silent
+echo "pre-push: all green"

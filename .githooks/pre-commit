@@ -1,0 +1,19 @@
+#!/bin/sh
+# Fast gate before every commit: lint, typecheck and the unit/component tests (about a minute).
+# The slow suites (deploy/backup simulations, build, e2e) run before a push; see .githooks/pre-push.
+# Note: the checks run on the working tree, not on the staged snapshot.
+HOOK_NAME=pre-commit
+. "$(dirname "$0")/lib.sh"
+
+files=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$files" ] && exit 0
+if ! echo "$files" | grep -qvE '\.(md|txt)$|^docs/'; then
+  echo "pre-commit: docs only, skipping checks"
+  exit 0
+fi
+
+echo "pre-commit: lint, typecheck, unit tests"
+step "lint" npm run lint --silent
+step "typecheck" npm run typecheck --silent
+step "unit tests" npx vitest run --exclude src/deploy-scripts.test.ts --exclude src/scripts.test.ts --reporter=dot
+echo "pre-commit: all green"

@@ -13,7 +13,9 @@
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "server": "sh scripts/server.sh",
-    "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run build",
+    "hooks": "sh scripts/install-hooks.sh",
+    "verify": "npm run check && npm run e2e"
   },
   "dependencies": {
     "@radix-ui/react-popover": "^1.1.23",
