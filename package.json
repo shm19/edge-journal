@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
+    "server": "sh scripts/server.sh",
     "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run build"
   },
   "dependencies": {

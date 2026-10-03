@@ -11,6 +11,10 @@ node_modules
 *.db-shm
 .env*
 !.env.example
+.deploy.env
+# the SSH deployment tooling is not part of the image
+deploy
+scripts/server.sh
 # not needed to build the app
 scripts/backtest-data
 coverage

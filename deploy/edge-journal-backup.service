@@ -1,0 +1,15 @@
+[Unit]
+Description=Edge Journal backup (database + screenshots)
+
+[Service]
+Type=oneshot
+User=edge-journal
+Group=edge-journal
+Environment=DATA_DIR=/var/lib/edge-journal BACKUP_DIR=/var/backups/edge-journal
+# Keeps the newest 30 backups (retention is in scripts/backup.sh).
+ExecStart=/bin/sh /opt/edge-journal/current/scripts/backup.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/edge-journal /var/backups/edge-journal

@@ -1,0 +1,34 @@
+[Unit]
+Description=Edge Journal (trading journal)
+After=network.target
+
+[Service]
+Type=simple
+User=edge-journal
+Group=edge-journal
+WorkingDirectory=/opt/edge-journal/current
+# Defaults first; /etc/edge-journal/edge-journal.env (root, 0600: APP_PASSWORD, SESSION_SECRET, HOST, PORT, COOKIE_SECURE)
+# overrides them; the two lines after it can not be overridden.
+Environment=HOST=127.0.0.1 PORT=3000
+EnvironmentFile=/etc/edge-journal/edge-journal.env
+Environment=NODE_ENV=production DATA_DIR=/var/lib/edge-journal NEXT_TELEMETRY_DISABLED=1
+# @NODE@ is replaced with the absolute path of node by deploy/server-setup.sh. next start prints a harmless
+# 'does not work with output: standalone' warning; the full build is used on purpose so npm prune can stay simple.
+ExecStart=@NODE@ node_modules/next/dist/bin/next start -H $HOST -p $PORT
+Restart=on-failure
+RestartSec=3
+# SIGTERM, then up to 30 s, so SQLite can close and checkpoint its WAL cleanly.
+TimeoutStopSec=30
+
+# Hardening. The app writes only the data dir (DB + screenshots) and .next/cache of the release.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/edge-journal /var/backups/edge-journal /opt/edge-journal/releases
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
