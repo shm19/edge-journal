@@ -60,6 +60,13 @@ SQLite does not index foreign keys, so these are explicit: `scenarios(idea_id)`,
   - It is null if there is no link, the link was deleted, or either scenario is open or has zero risk. A manual `cost_r` always wins over the linked delta.
   - **Overlap rule.** Two mistakes measured against the same alternative describe the same lost R. A *trade's* total (`tradeMistakeCost()`, idea page) counts each linked alternative's delta once, plus every manual cost. Per-mistake-type rows (`mistakeSummary()`, dashboard) sum each mistake's own cost, so type rows are not additive across types.
   - Totals can be partial: show "n of m measured" when `costKnown < count`. Display cost as a signed R with `fmtCost()` (lost = negative), never a hand-written "−".
+- **Balance simulation** (`simulateBalance()` in `stats.ts`, hypothetical): trades in close-date order; `pnl = base × riskPct/100 × R − fee`, `base` = current balance (compounding) or the starting balance (fixed).
+  - **Risk is in percent** (1 = 1%), the same unit as `ideas.risk_pct` and the Settings default; allowed range 0 < risk ≤ 100.
+  - Per-trade mode: a trade with no `risk_pct` (or a recorded 0 or less, treated as missing) uses the default risk and is counted in `fallbackCount` (the UI says so).
+  - A Settings default risk that is not > 0 is treated as 1% (`parseBalanceParams`). Number inputs are parsed with `parsePrice` ("1,000" = 1000, "1.234,5" = 1234.5; "0x10" is an error).
+  - **Ruin:** when a trade takes the balance to ≤ 0 (or below float dust, `1e-9 × start`) it is clamped to 0 (that trade's loss is only what was left), `ruined` is set and the later trades are not simulated (`skippedAfterRuin`), so risk is never computed on a non-positive balance.
+  - Fees apply to every simulated trade, breakevens included. Zero trades: `end = start`, `returnPct = null` (the UI shows an empty state, not zeros).
+  - Max drawdown is peak-to-trough with the peak starting at the starting balance; the $ and % maxima are tracked separately. Nothing is rounded in the math (`fmtMoney` rounds for display). Known set +2R, −1R, +3R at 1% on $1,000: compounding 1020 → 1009.80 → 1040.094, fixed 1020 → 1010 → 1040.
 - Sessions follow daylight saving time:
   - London 07–16 London time.
   - New York 08–17 New York time.

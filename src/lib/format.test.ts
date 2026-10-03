@@ -31,7 +31,7 @@ describe("date formatting + formatter cache", () => {
   });
 });
 
-import { BIAS_LABEL, EXIT_LABEL, fmtCost, fmtNum, fmtPct, fmtPrice, fmtR, rTone } from "./format";
+import { BIAS_LABEL, EXIT_LABEL, fmtCost, fmtMoney, fmtNum, fmtPct, fmtPctPoints, fmtPrice, fmtR, rTone } from "./format";
 
 describe("number formatting", () => {
   it("fmtR signs, rounds and dashes missing or non-finite values", () => {
@@ -86,5 +86,28 @@ describe("label maps", () => {
   it("are filled in", () => {
     expect(BIAS_LABEL.with).toBe("With HTF");
     expect(EXIT_LABEL.not_filled).toBe("Not filled");
+  });
+});
+
+describe("fmtMoney / fmtPctPoints", () => {
+  it("formats dollars, signs and dashes", () => {
+    expect(fmtMoney(1009.8)).toBe("$1,009.80");
+    expect(fmtMoney(20, true)).toBe("+$20.00");
+    expect(fmtMoney(20)).toBe("$20.00");
+    expect(fmtMoney(-10, true)).toBe("-$10.00");
+    expect(fmtMoney(0, true)).toBe("$0.00");
+    expect(fmtMoney(-0.001, true)).toBe("$0.00");
+    expect(fmtMoney(null)).toBe("—");
+    expect(fmtMoney(Number.NaN)).toBe("—");
+  });
+  it("formats percent points", () => {
+    expect(fmtPctPoints(4.009)).toBe("+4.01%");
+    expect(fmtPctPoints(-1.5, 1)).toBe("-1.5%");
+    expect(fmtPctPoints(0)).toBe("0.00%");
+    expect(fmtPctPoints(-0.001)).toBe("0.00%"); // never "-0.00%"
+    expect(fmtPctPoints(-0)).toBe("0.00%");
+    expect(fmtPctPoints(0.004)).toBe("0.00%");
+    expect(fmtPctPoints(null)).toBe("—");
+    expect(fmtPctPoints(Number.NaN)).toBe("—");
   });
 });

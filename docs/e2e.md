@@ -9,7 +9,7 @@
   - `DATA_DIR` = `$TMPDIR/edge-journal-e2e-3300`, wiped before the build and removed again by `e2e/global-teardown.ts`;
   - throwaway `APP_PASSWORD` / `SESSION_SECRET` from `e2e/env.ts` (not your real ones; `.env.local` is overridden), `COOKIE_SECURE=false`, `NODE_ENV=production`.
 - Port **3300** is reserved for this. It fails if something already listens there (`reuseExistingServer: false`).
-- One worker, no retries. A full run takes about 1.5 minutes (roughly 1 minute is the build, the 18 tests take about 40 s).
+- One worker, no retries. A full run takes about 1.5 minutes (roughly 1 minute is the build, the 19 tests take about 45 s).
 - Needs Node 22 on `PATH` (see AGENTS.md).
 
 ## Layout
@@ -18,14 +18,15 @@
 | `e2e/env.ts` | Port, base URL, throwaway secrets |
 | `e2e/helpers.ts` | `test` (fails on any console error or page error), `authed` (logged-in page), editor helpers, `kpi()`, `chooseOption()`, `setDateTime()` |
 | `01-login.spec.ts` | Wrong password, 5-failure lock (own fake client IP), right password, `?next=` kept, off-site `?next=` ignored |
-| `02-trades.spec.ts` | Taken BTC trade (-1R) with a BE stop alternative, an inline-created mistake measured against it (-1.00R), a screenshot upload; a winning ETH trade (+3R) with typed / picked UTC open and close times |
+| `02-trades.spec.ts` | Taken BTC trade (-1R) with a BE stop alternative, an inline-created mistake measured against it (-1.00R), a screenshot upload, fixed past UTC open / close dates (2026-10-01); a winning ETH trade (+3R) with typed / picked UTC open and close times |
 | `03-skip-forward.spec.ts` | Skipped idea with a skip-reason tag, Hit and Miss forward tests with no prices |
 | `04-dashboard-analytics.spec.ts` | Dashboard KPIs against hand-calculated numbers, group-by, alternatives tab, skips tab, date-range filter (typed, preset, Clear) |
 | `05-settings-export-logout.spec.ts` | Tag and mistake-type add / rename / delete, CSV export, sign out |
+| `06-balance.spec.ts` | Dashboard "Balance sim" row, Analytics → Balance with the 02 trades (compounding $1,019.70, fixed $1,020.00; mode toggle applies at once), R total sub line, inline validation error, empty state with a filter, Reset, remembered inputs |
 
 ## Rules
-- **The specs run in file order and later ones depend on earlier data** (they share one DB). `02` and `03` seed it, `04` and `05` read it. Do not run a single later file on its own.
-- Dashboard numbers: 2 closed taken trades (-1R, +3R) → win rate 50%, expectancy +1.00R, total +2.00R. The skipped and forward ideas must not change them. If you add a taken trade to a spec, update `04`.
+- **The specs run in file order and later ones depend on earlier data** (they share one DB). `02` and `03` seed it, `04`, `05` and `06` read it. Do not run a single later file on its own.
+- Dashboard numbers: 2 closed taken trades (-1R, +3R) → win rate 50%, expectancy +1.00R, total +2.00R. The skipped and forward ideas must not change them. Taken trades use fixed dates (never "now"), so ordering and "largest loss" do not depend on the real clock. If you add a taken trade to a spec, update `04`.
 - The login throttle is keyed on `x-forwarded-for`; a spec that fails logins sets its own fake IP (`extraHTTPHeaders`) so it can't lock out the others (all normal logins share the key `local`).
 - Prefer role / label locators. A few places use workarounds because the UI lacks accessible names (see the comments in `05`).
 - Failures leave a trace in `test-results/` (gitignored): `npx playwright show-trace <trace.zip>`.

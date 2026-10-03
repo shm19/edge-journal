@@ -35,6 +35,7 @@ export function AnalyticsControls({
           { k: "breakdown", l: "Breakdown" },
           { k: "alternatives", l: "Alternatives" },
           { k: "skips", l: "Skipped & missed" },
+          { k: "balance", l: "Balance" },
         ].map((t) => (
           <button
             key={t.k}

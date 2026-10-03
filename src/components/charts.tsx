@@ -28,11 +28,24 @@ const TOOLTIP = {
 
 const fmtR = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(2)}R`;
 
-export function EquityChart({ data, height = 240 }: { data: { n: number; cum: number; label: string }[]; height?: number }) {
+const fmtMoneyTick = (v: number) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+
+/** Cumulative curve in R (default) or, with `money`, a $ balance that starts at `base` (the starting balance). */
+export function EquityChart({
+  data,
+  height = 240,
+  money = false,
+  base = 0,
+}: {
+  data: { n: number; cum: number; label: string }[];
+  height?: number;
+  money?: boolean;
+  base?: number;
+}) {
   if (data.length === 0) return <ChartEmpty height={height} />;
-  const series = [{ n: 0, cum: 0, label: "Start" }, ...data];
+  const series = [{ n: 0, cum: base, label: "Start" }, ...data];
   const last = series[series.length - 1].cum;
-  const color = last >= 0 ? "#34d399" : "#fb7185";
+  const color = last >= base ? "#34d399" : "#fb7185";
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
@@ -44,11 +57,11 @@ export function EquityChart({ data, height = 240 }: { data: { n: number; cum: nu
         </defs>
         <CartesianGrid {...GRID} />
         <XAxis dataKey="n" {...AXIS} />
-        <YAxis {...AXIS} tickFormatter={(v: number) => `${v}R`} />
-        <ReferenceLine y={0} stroke="#3f3f46" />
+        <YAxis {...AXIS} domain={money ? ["auto", "auto"] : undefined} tickFormatter={(v: number) => (money ? fmtMoneyTick(v) : `${v}R`)} />
+        <ReferenceLine y={base} stroke="#3f3f46" />
         <Tooltip
           {...TOOLTIP}
-          formatter={(v) => [fmtR(Number(v)), "Cumulative"]}
+          formatter={(v) => [money ? fmtMoneyTick(Number(v)) : fmtR(Number(v)), money ? "Balance" : "Cumulative"]}
           labelFormatter={(_, p) => (p?.[0]?.payload as { label?: string })?.label ?? ""}
         />
         <Area type="monotone" dataKey="cum" stroke={color} strokeWidth={2} fill="url(#eqFill)" dot={false} isAnimationActive={false} />

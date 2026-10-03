@@ -13,6 +13,7 @@ A personal, self-hosted trading journal for discretionary crypto trading. It's b
   - Break results down by setup, tag, tag group, coin, timeframe, HTF bias, range/trend, session, weekday, month or followed-plan.
   - **Actual vs alternative** comparison.
   - **Skip audit**: R left on the table vs losses avoided.
+  - **Balance simulator** (Analytics → Balance, a dashboard card, a "Simulate" link on each setup): "how much would I have made?" from a starting balance, a risk % (or each trade's own), compounding or fixed, optional fees. It is **hypothetical**, follows the normal filters and labels non-taken statuses as not live.
 - **Exit types.** Alternatives can be marked **Not filled** (counts as 0R), so limit-entry variants like "wick entry" are judged fairly.
 - **Prices** accept `64,250`, `64250.5` or `1.234,5`. The parsed number is echoed under the field.
 - **Times** are always UTC: stored, entered and shown in UTC, and not configurable.

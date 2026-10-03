@@ -1,4 +1,4 @@
-import { BarChart3, Pencil, Plus } from "lucide-react";
+import { BarChart3, Calculator, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Kpi, Markdown, RValue, SampleBadge } from "@/components/bits";
@@ -79,6 +79,9 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
           </LinkButton>
           <LinkButton href={`/analytics?setup=${setup.id}&group=tag`} size="sm">
             <BarChart3 className="h-3.5 w-3.5" /> Analyze
+          </LinkButton>
+          <LinkButton href={`/analytics?tab=balance&setup=${setup.id}`} size="sm">
+            <Calculator className="h-3.5 w-3.5" /> Simulate
           </LinkButton>
           <LinkButton href={`/setups/${setup.id}/edit`} size="sm">
             <Pencil className="h-3.5 w-3.5" /> Edit

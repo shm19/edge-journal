@@ -99,4 +99,5 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | Seed data (setups, tags, scenario types) | `src/db/seed.ts` |
 | Navigation | `src/components/nav.tsx` (desktop sidebar only) |
 | UI primitives | `src/components/ui.tsx` (Button, Input, Field, Card, Badge, Segmented, …; re-exports `Select`), `src/components/ui/select.tsx` (the one dropdown: Radix Popover + cmdk, native-`<select>` API, no raw `<select>` in the app; test helper `test/select.ts`, e2e helper `chooseOption`), `src/components/ui/date-picker.tsx` (UTC calendar popovers: `DateTimeField`, `DateRangePicker`, `Calendar`; pure date maths in `src/lib/date-input.ts`; no native date inputs; e2e helper `setDateTime`), `src/components/bits.tsx` (RValue, badges, Kpi, Markdown) |
-| Charts | `src/components/charts.tsx` (Recharts, client) |
+| Charts | `src/components/charts.tsx` (Recharts, client; `EquityChart` takes `money` / `base` for a $ balance curve) |
+| Balance simulator | Math `simulateBalance` in `src/lib/stats.ts`; URL params `src/lib/balance.ts`; remembered inputs `src/lib/balance-store.ts`; form `components/balance-form.tsx`, output `components/balance-results.tsx` (Analytics → Balance tab in `analytics/page.tsx`), dashboard card `components/balance-card.tsx`, "Simulate" link on `setups/[id]/page.tsx`. Hypothetical: keep the note and the not-live label. |

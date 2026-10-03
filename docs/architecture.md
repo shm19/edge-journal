@@ -14,7 +14,7 @@ src/
       page.tsx             Dashboard
       ideas/               Journal list, new, [id] detail, [id]/edit
       setups/              Playbook list, new, [id] detail, [id]/edit
-      analytics/page.tsx   Tabs: breakdown | alternatives | skips
+      analytics/page.tsx   Tabs: breakdown | alternatives | skips | balance
       settings/page.tsx    General settings, tags & groups, scenario types, export, sign out
     api/
       uploads/             POST image (magic-byte check, 10 MB); [name] GET serves it (auth, nosniff)
@@ -25,7 +25,9 @@ src/
     index.ts               Lazy connection (WAL, FKs), runs migrations + seed on first use
     seed.ts                First-run seed + versioned additive upgrades (SEED_VERSION)
   lib/
-    stats.ts               PURE: R math, summarize, groupSummaries, compareScenarios, skipAudit, sessions (DST-aware)
+    stats.ts               PURE: R math, summarize, groupSummaries, compareScenarios, skipAudit, simulateBalance, sessions (DST-aware)
+    balance.ts             PURE: balance-simulator URL params (parseBalanceParams, balanceQuery, VIEW_KEYS)
+    balance-store.ts       Client-only localStorage of the last inputs (guarded; useSyncExternalStore)
     queries.ts             Server (server-only): ALL DB reads. loadIdeas() → IdeaView (joins + computed R), targeted getIdea() (React cache()),
                            ideaNeighbours() (prev/next in SQL), getSetup, setupIdeaCount, usageCounts, lastSymbol, list* helpers
     analytics.ts           PURE (types-only import of queries): parseFilters/applyFilters, DIMENSIONS + dimensionKeys, rrBucket,
@@ -58,7 +60,7 @@ scripts/                   backup.sh + backtest pipeline (see docs/backtesting.m
   4. calls `revalidatePath("/", "layout")`.
 
   The client then calls `router.push` / `router.refresh`.
-- **URL state.** Filters, group-by, metric, tab and range live in search params (`components/filter-bar.tsx`, `analytics-controls.tsx`). The filter bar reads `window.location.search` when updating, to avoid stale params.
+- **URL state.** Filters, group-by, metric, tab, range and the balance-simulator inputs (`start`, `risk`, `mode`, `trade`, `fee`; `VIEW_KEYS` in `balance.ts` are not filters) live in search params (`components/filter-bar.tsx`, `analytics-controls.tsx`). The filter bar reads `window.location.search` when updating, to avoid stale params.
 
 ## Server/client boundaries
 - Files with `"use client"` export **components only** as far as the server is concerned. A constant exported from a client module becomes a client reference on the server, so `METRICS.find` breaks. Shared values go in plain `src/lib/*` modules.

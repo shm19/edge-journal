@@ -2,6 +2,9 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AnalyticsControls } from "@/components/analytics-controls";
+import { BalanceForm } from "@/components/balance-form";
+import { BalanceResults } from "@/components/balance-results";
+import { parseBalanceParams, simOptions } from "@/lib/balance";
 import { METRICS, type MetricKey } from "@/lib/metrics";
 import { RValue, SampleBadge, StatusBadge } from "@/components/bits";
 import { BreakdownList } from "@/components/breakdown-list";
@@ -24,7 +27,7 @@ import { listSetups, listTags, loadIdeas, tagGroups } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 import { SKIP_REASON_GROUP } from "@/db/schema";
 import { STATUS_BUCKETS } from "@/lib/status";
-import { equityCurve, groupSummaries, skipAudit, type Summary } from "@/lib/stats";
+import { equityCurve, groupSummaries, simulateBalance, skipAudit, type Summary } from "@/lib/stats";
 
 export const metadata = { title: "Analytics" };
 
@@ -37,7 +40,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const groupRaw = one(sp.group) ?? "setup";
   const metricRaw = one(sp.metric);
   const metric: MetricKey = METRICS.some((m) => m.key === metricRaw) ? (metricRaw as MetricKey) : "expectancy";
-  const { beThresholdR: be } = getSettings();
+  const { beThresholdR: be, defaultRiskPct } = getSettings();
 
   const all = loadIdeas();
   const filters = parseFilters(sp);
@@ -71,7 +74,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageHeader title="Analytics" description="Slice your results any way you want. Everything is in R." />
+      <PageHeader
+        title="Analytics"
+        description={tab === "balance" ? "Hypothetical balance in $, simulated from your R results." : "Slice your results any way you want. Everything is in R."}
+      />
       <Suspense>
         <AnalyticsControls dimensions={dims} group={group} metric={metric} tab={tab} />
         <FilterBar setups={setups} tags={tags} symbols={symbols} showStatus={tab !== "skips"} defaultStatus={tab !== "skips" ? "taken" : undefined} />
@@ -164,6 +170,42 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               </div>
             </Card>
           </div>
+        );
+      })()}
+
+      {tab === "balance" && (() => {
+        const scoped = applyFilters(all, breakdownFilters);
+        const pts = primaryPoints(scoped);
+        const { inputs, errors } = parseBalanceParams(sp, defaultRiskPct);
+        const bad = Object.keys(errors).length > 0;
+        const sim = bad ? null : simulateBalance(pts.map((p) => ({ ...p, riskPct: p.idea.riskPct })), simOptions(inputs));
+        const raw = (k: string) => one(sp[k]);
+        const d = parseBalanceParams({}, defaultRiskPct).inputs;
+        const defaults = { start: String(d.start), risk: String(d.riskPct), mode: d.mode, trade: false, fee: String(d.fee) };
+        const values = {
+          start: raw("start") ?? String(inputs.start),
+          risk: raw("risk") ?? String(inputs.riskPct),
+          mode: raw("mode") ?? inputs.mode,
+          trade: inputs.useTradeRisk,
+          fee: raw("fee") ?? String(inputs.fee),
+        };
+        return (
+          <>
+            <BalanceForm key={JSON.stringify(values)} values={values} errors={errors} defaults={defaults} />
+            {bad || !sim ? (
+              <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/[0.07] px-3 py-2 text-sm text-loss">
+                Fix the highlighted inputs to run the simulation.
+              </p>
+            ) : (
+              <BalanceResults
+                sim={sim}
+                meta={Object.fromEntries(pts.map((p) => [p.id, { setup: p.idea.setup?.name ?? "No setup", status: p.idea.status }]))}
+                statuses={breakdownFilters.status}
+                defaultRiskPct={inputs.riskPct}
+                useTradeRisk={inputs.useTradeRisk}
+              />
+            )}
+          </>
         );
       })()}
 

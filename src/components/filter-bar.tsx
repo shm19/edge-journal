@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { Setup, Tag } from "@/db/schema";
 import { BIASES, IDEA_STATUSES, TIMEFRAMES } from "@/db/schema";
 import { cn } from "@/lib/cn";
+import { VIEW_KEYS } from "@/lib/balance";
 import { normalizeRange } from "@/lib/date-input";
 import { BIAS_LABEL, STATUS_LABEL } from "@/lib/format";
 import { Select } from "./ui";
@@ -58,7 +59,7 @@ export function FilterBar({
     else set.add(s);
     update({ status: [...set].join(",") || (defaultStatus ? "none" : null) });
   };
-  const active = [...sp.keys()].filter((k) => k !== "group" && k !== "metric" && k !== "tab").length > 0 || q !== "";
+  const active = [...sp.keys()].filter((k) => !(VIEW_KEYS as readonly string[]).includes(k)).length > 0 || q !== "";
 
   // A hand-edited URL may hold junk or an inverted range; show what the server actually filters by.
   const range = normalizeRange(sp.get("from") ?? "", sp.get("to") ?? "");
@@ -155,7 +156,7 @@ export function FilterBar({
           onClick={() => {
             setQ("");
             const keep = new URLSearchParams();
-            for (const k of ["group", "metric", "tab"]) {
+            for (const k of VIEW_KEYS) {
               const v = sp.get(k);
               if (v) keep.set(k, v);
             }

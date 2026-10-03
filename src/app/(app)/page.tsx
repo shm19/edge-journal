@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Kpi, RValue, SampleBadge, SetupBadge } from "@/components/bits";
+import { BalanceCard } from "@/components/balance-card";
 import { BreakdownList } from "@/components/breakdown-list";
 import { EquityChart, RHistogram } from "@/components/charts";
 import { IdeaTable } from "@/components/idea-table";
@@ -25,7 +26,7 @@ const RANGES = [
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   const { range = "all" } = await searchParams;
-  const { beThresholdR: be } = getSettings();
+  const { beThresholdR: be, defaultRiskPct } = getSettings();
   const all = loadIdeas();
 
   const now = new Date();
@@ -197,6 +198,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 value={<><RValue r={backtest.expectancy} be={0} /> <span className="text-faint">avg · {fmtPct(backtest.winRate)} · n={backtest.count}</span></>}
               />
             )}
+            <BalanceCard
+              points={primaryPoints(inBuckets(all, "taken")).map((p) => ({ id: p.id, r: p.r, date: p.date, riskPct: p.idea.riskPct }))}
+              defaultRiskPct={defaultRiskPct}
+            />
             <Row
               label="Skipped / missed"
               value={<Link href="/analytics?tab=skips" className="hover:text-accent"><RValue r={skipped.totalR} be={0} /> <span className="text-faint">if taken · n={skipped.count}</span></Link>}

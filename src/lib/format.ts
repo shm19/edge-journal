@@ -28,6 +28,21 @@ export function fmtPct(v: number | null | undefined, digits = 0): string {
   return `${(v * 100).toFixed(digits)}%`;
 }
 
+/** Dollar amount with 2 decimals ("$1,009.80"); `signed` adds "+" to gains. Rounding happens here only. */
+export function fmtMoney(v: number | null | undefined, signed = false): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const s = `$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return v < 0 && Number(Math.abs(v).toFixed(2)) !== 0 ? `-${s}` : signed && v > 0 ? `+${s}` : s;
+}
+
+/** A value that is already in percent ("+24.00%"), signed. */
+export function fmtPctPoints(v: number | null | undefined, digits = 2): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const s = v.toFixed(digits);
+  const n = Number(s); // a value that rounds to zero is "0.00%", never "-0.00%"
+  return `${n > 0 ? "+" : ""}${n === 0 ? (0).toFixed(digits) : s}%`;
+}
+
 export function fmtNum(v: number | null | undefined, digits = 2): string {
   if (v == null || !Number.isFinite(v)) return "—";
   return v.toFixed(digits);

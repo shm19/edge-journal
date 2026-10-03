@@ -90,7 +90,7 @@ Every step must also pass the usual checks: `npm test`, `typecheck`, `lint`, `bu
 
 **After Step 3b:** coverage must not drop below the thresholds.
 
-**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → ~~3b~~ → ~~5~~ → ~~6~~ → 5 → 6 → 7. (Step 0 is done.)
+**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → ~~3b~~ → ~~5~~ → ~~6~~ → ~~7~~ 5 → 6 → 7. (Step 0 is done.)
 
 **Process for every step and change:** follow [docs/workflow.md](docs/workflow.md).
 1. Scope.
@@ -514,7 +514,28 @@ Add `npm run e2e`.
   - the `<input type="date">` pair in `src/components/filter-bar.tsx`.
 - **Done when:** no native datetime or date inputs remain; a typed or picked time round-trips exactly (UTC).
 
-### ☐ Step 7: Balance simulator ("how much would I have made?")
+### ☑ Step 7: Balance simulator (done 2026-10-03)
+**In one line:** a what-if calculator that shows what your trades would have turned a starting balance into (balance curve, drawdown, per-trade table), on a new Analytics tab plus a dashboard row.
+
+**Workflow checklist:**
+- [x] 1 Scope: below.
+- [x] 2 Built with Shayan's lazy-developer skill. Rung 5 for the chart (existing Recharts `EquityChart` with `money`/`base` props), rung 2 for the tab, filters, KPI tiles and form primitives, rung 7 for the math (one pure `simulateBalance` in `stats.ts`) and the URL-param parser (`src/lib/balance.ts`, in the `pure` group); inputs are remembered in localStorage (`balance-store.ts`).
+- [x] 3a Code review: no P0; 3 P1 (e2e time bomb on the real clock, `1,000` parsed as 1, dashboard card scope), 9 P2. The core math was verified by hand.
+- [x] 3b Product review (live UI): one trust bug (the Analytics subtitle said "Everything is in R" on the $ tab), 5 P1, 9 P2.
+- [x] 4 Triage: all P0/P1 and the cheap P2 applied (see below).
+- [x] 5 `npm run check` green (501 tests in 32 files, was 452/29); `npm run e2e` 19/19.
+- [x] 6 Docs: product, data-model, architecture, README, AGENTS, testing, e2e, CHANGELOG.
+- [x] 7 Browser (1280 px): Balance tab (form, hypothetical note, n<20 warning, KPI tiles incl. R total, curve), dashboard "Balance sim" row. Hand check: 12 taken trades, +14.05R, 1% compounding → $1,000 → $1,148.14 (+14.81%).
+- [x] 8 Committed (see `git log`).
+
+**Notes:**
+- Rules: risk is in percent (1 = 1%); compounding uses the current balance, fixed uses the starting balance; a fee is charged on every trade including breakevens; ruin clamps the balance to 0 and later trades are not simulated; a recorded risk of 0 counts as missing; a Settings default risk of 0 or less is treated as 1%; numbers are parsed with `parsePrice` (`1,000` works).
+- Always labelled hypothetical; non-taken statuses show a "Not live results" banner (and "Mixed statuses" when combined with taken); the n<20 warning shows.
+- The dashboard row is all-time taken trades and ignores the 7D/30D selector (it says so); it uses your last simulator settings.
+- Backlog: max drawdown in R, a per-month table, a loading skeleton.
+
+**Original plan:**
+ ("how much would I have made?")
 - **Inputs:**
   - starting balance (e.g. $1,000);
   - risk per trade, either the default % from Settings or each trade's recorded `risk_pct`;
@@ -536,6 +557,7 @@ Add `npm run e2e`.
 - **Done when:** the numbers match a hand calculation on a known set (e.g. +2R, −1R, +3R at 1% on $1,000, both modes); it works with filters; it's linked from the dashboard and setup pages.
 
 ## Backlog (not scheduled)
+- Balance simulator extras: max drawdown in R, a per-month table, a loading skeleton for the Run button.
 - Date picker polish from the Step 6 reviews: per-chip clear, preset wording, calendar-button tab order, trailing week rows, `emptyIdea()` clock at render.
 - Test polish from the Step 3b review: `functions: 100` on the pure group, a stronger `metrics.test.ts`, `tempDb()` cleanup, make e2e specs independent (setup project), scope a few e2e locators, explicit env keys in the e2e web server, one shared e2e data-dir constant.
 - Filter by "No tag" in the filter bar (the analytics "No tag" rows have no matching filter).

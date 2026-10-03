@@ -6,6 +6,9 @@ test("taken trade with alternative, linked mistake and screenshot", async ({ pag
   await newIdea(page, "Taken", "BTC");
   await fillPrices(page, 0, { entry: "100", stop: "90", target: "130" });
   await page.getByRole("button", { name: "Stopped" }).click(); // primary: exit at the stop = -1R
+  // Fixed past dates (before the ETH trade below) so ordering and "largest loss" never depend on the real clock.
+  await setDateTime(page, "Opened (UTC)", "2026-10-01 09:00");
+  await setDateTime(page, "Closed (UTC)", "2026-10-01 18:00");
 
   // Alternative "BE stop": a copy of the primary, closed at breakeven = 0R.
   await page.getByRole("button", { name: "Add BE stop" }).click();

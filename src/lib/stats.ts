@@ -314,3 +314,119 @@ export function monthOf(iso: string, timeZone = "UTC"): string {
   const m = parts.find((p) => p.type === "month")?.value;
   return `${y}-${m}`;
 }
+
+// ---------- Balance simulator (hypothetical) ----------
+
+export type BalanceMode = "compounding" | "fixed";
+
+export interface SimPoint extends RPoint {
+  /** The trade's own recorded risk, in PERCENT of the account (1 = 1%, not 0.01); null when never recorded. */
+  riskPct?: number | null;
+}
+
+export interface SimOptions {
+  /** Starting balance in $; must be > 0 (the URL parser guarantees it). */
+  start: number;
+  /** Default risk per trade in PERCENT (1 = 1%). Used for every trade, or as the fallback when useTradeRisk is on. */
+  riskPct: number;
+  /** compounding: risk % of the current balance. fixed: risk % of the starting balance. */
+  mode: BalanceMode;
+  /** Use each trade's recorded riskPct; a trade without one falls back to `riskPct` and is counted in fallbackCount. */
+  useTradeRisk: boolean;
+  /** $ fee charged on every simulated trade (also on breakevens); default 0. */
+  feePerTrade?: number;
+}
+
+export interface SimTrade {
+  id: number;
+  date: string;
+  r: number;
+  /** The risk % actually applied to this trade. */
+  riskPct: number;
+  /** true when useTradeRisk was on but the trade had no recorded risk (the default was used). */
+  fallback: boolean;
+  /** $ result after the fee (the balance change). */
+  pnl: number;
+  /** Balance after this trade. */
+  balance: number;
+}
+
+export interface SimResult {
+  start: number;
+  trades: SimTrade[];
+  /** Balance after the last simulated trade (== start for zero trades). */
+  end: number;
+  pnl: number;
+  /** Return in percent of the starting balance; null with zero trades. */
+  returnPct: number | null;
+  /** Largest peak-to-trough fall in $ / in % of that peak (each maximised separately), peak starting at `start`. */
+  maxDrawdown: number;
+  maxDrawdownPct: number;
+  /** Best / worst single-trade $ result; null when no trade won / lost. */
+  largestWin: number | null;
+  largestLoss: number | null;
+  /** Balance reached 0 or below: the account is blown, the balance is clamped to 0 and later trades are NOT simulated. */
+  ruined: boolean;
+  /** How many trades were not simulated because of ruin. */
+  skippedAfterRuin: number;
+  /** Trades that used the default risk because they had no recorded one (only when useTradeRisk). */
+  fallbackCount: number;
+}
+
+/**
+ * Hypothetical account balance if every trade had risked the stated %. Per trade (in closing-date order):
+ * pnl = base × riskPct/100 × R − fee, base = current balance (compounding) or the starting balance (fixed).
+ * A recorded riskPct of 0 (or less) is treated as missing (fallback). Nothing is rounded here (display only).
+ * Ruin: when the balance reaches <= 0 (or float dust below 1e-9 × start) it is clamped to 0, the loss of that
+ * trade is only what was left, and the remaining trades are not simulated (risk of a non-positive balance is never
+ * computed, so there is no "negative risk" maths). Zero trades: result with end == start and null return.
+ */
+export function simulateBalance(points: SimPoint[], o: SimOptions): SimResult {
+  const fee = o.feePerTrade ?? 0;
+  const sorted = [...points].sort(byDate);
+  const trades: SimTrade[] = [];
+  let balance = o.start;
+  let peak = o.start;
+  let maxDd = 0;
+  let maxDdPct = 0;
+  let win: number | null = null;
+  let loss: number | null = null;
+  let fallbackCount = 0;
+  let ruined = false;
+
+  for (const p of sorted) {
+    const recorded = o.useTradeRisk && p.riskPct != null && p.riskPct > 0; // a recorded 0 counts as missing
+    const fallback = o.useTradeRisk && !recorded;
+    const riskPct = recorded ? p.riskPct! : o.riskPct;
+    const base = o.mode === "compounding" ? balance : o.start;
+    let pnl = base * (riskPct / 100) * p.r - fee;
+    if (balance + pnl < 1e-9 * o.start) {
+      pnl = -balance;
+      ruined = true;
+    }
+    balance += pnl;
+    if (fallback) fallbackCount++;
+    trades.push({ id: p.id, date: p.date, r: p.r, riskPct, fallback, pnl, balance });
+    if (pnl > 0) win = win == null ? pnl : Math.max(win, pnl);
+    if (pnl < 0) loss = loss == null ? pnl : Math.min(loss, pnl);
+    peak = Math.max(peak, balance);
+    maxDd = Math.max(maxDd, peak - balance);
+    maxDdPct = Math.max(maxDdPct, ((peak - balance) / peak) * 100);
+    if (ruined) break;
+  }
+
+  return {
+    start: o.start,
+    trades,
+    end: balance,
+    pnl: balance - o.start,
+    returnPct: trades.length ? ((balance - o.start) / o.start) * 100 : null,
+    maxDrawdown: maxDd,
+    maxDrawdownPct: maxDdPct,
+    largestWin: win,
+    largestLoss: loss,
+    ruined,
+    skippedAfterRuin: sorted.length - trades.length,
+    fallbackCount,
+  };
+}

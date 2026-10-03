@@ -6,6 +6,8 @@ import {
   mistakeCost,
   outcomeOf,
   plannedRR,
+  simulateBalance,
+  type SimPoint,
   realizedR,
   sampleConfidence,
   sessionOf,
@@ -252,5 +254,121 @@ describe("compareScenarios with nothing to compare", () => {
     expect(c.deltaExpectancy).toBeNull();
     expect(c.deltaWinRate).toBeNull();
     expect(c.variantBetterCount).toBe(0);
+  });
+});
+
+describe("simulateBalance", () => {
+  const pt = (id: number, r: number, riskPct?: number | null): SimPoint => ({ id, r, date: `2026-01-0${id}T00:00:00.000Z`, riskPct });
+  const known = [pt(1, 2), pt(2, -1), pt(3, 3)];
+  const base = { start: 1000, riskPct: 1, mode: "compounding" as const, useTradeRisk: false };
+
+  it("compounding: +2R, -1R, +3R at 1% on $1,000 -> 1020, 1009.80, 1040.094", () => {
+    const s = simulateBalance(known, base);
+    expect(s.trades.map((t) => t.balance)).toEqual([expect.closeTo(1020, 9), expect.closeTo(1009.8, 9), expect.closeTo(1040.094, 9)]);
+    expect(s.end).toBeCloseTo(1040.094, 9);
+    expect(s.pnl).toBeCloseTo(40.094, 9);
+    expect(s.returnPct).toBeCloseTo(4.0094, 9);
+    expect(s.start).toBe(1000);
+  });
+
+  it("fixed: 1020, 1010, 1040 (always risks 1% of the starting balance)", () => {
+    const s = simulateBalance(known, { ...base, mode: "fixed" });
+    expect(s.trades.map((t) => t.balance)).toEqual([1020, 1010, 1040]);
+    expect(s.trades.map((t) => t.pnl)).toEqual([20, -10, 30]);
+    expect(s.largestWin).toBe(30);
+    expect(s.largestLoss).toBe(-10);
+  });
+
+  it("orders by close date, not input order", () => {
+    const s = simulateBalance([known[2], known[0], known[1]], { ...base, mode: "fixed" });
+    expect(s.trades.map((t) => t.id)).toEqual([1, 2, 3]);
+  });
+
+  it("drawdown is peak to trough in $ and in % of the peak", () => {
+    const s = simulateBalance([pt(1, 2), pt(2, -1), pt(3, -1)], { ...base, mode: "fixed" });
+    expect(s.maxDrawdown).toBe(20); // 1020 -> 1000
+    expect(s.maxDrawdownPct).toBeCloseTo((20 / 1020) * 100, 9);
+  });
+
+  it("a losing streak compounds down more slowly than it fixes", () => {
+    const losses = [pt(1, -1), pt(2, -1), pt(3, -1)];
+    const c = simulateBalance(losses, base);
+    const f = simulateBalance(losses, { ...base, mode: "fixed" });
+    expect(c.end).toBeCloseTo(1000 * 0.99 ** 3, 9);
+    expect(f.end).toBe(970);
+    expect(c.largestWin).toBeNull();
+    expect(c.maxDrawdown).toBeCloseTo(1000 - c.end, 9);
+    expect(c.ruined).toBe(false);
+  });
+
+  it("zero trades: end equals start, null return, no extremes", () => {
+    const s = simulateBalance([], base);
+    expect(s).toMatchObject({ end: 1000, pnl: 0, returnPct: null, maxDrawdown: 0, maxDrawdownPct: 0, largestWin: null, largestLoss: null, ruined: false, skippedAfterRuin: 0 });
+    expect(s.trades).toEqual([]);
+  });
+
+  it("ruin: the balance is clamped to 0, the loss is only what was left, and later trades are not simulated", () => {
+    const s = simulateBalance([pt(1, -1), pt(2, 5), pt(3, 5)], { start: 1000, riskPct: 100, mode: "compounding", useTradeRisk: false });
+    expect(s.ruined).toBe(true);
+    expect(s.trades).toHaveLength(1);
+    expect(s.end).toBe(0);
+    expect(s.pnl).toBe(-1000);
+    expect(s.largestLoss).toBe(-1000);
+    expect(s.skippedAfterRuin).toBe(2);
+    expect(s.returnPct).toBe(-100);
+    expect(s.maxDrawdownPct).toBe(100);
+  });
+
+  it("ruin also happens in fixed mode once the losses exceed the balance", () => {
+    const s = simulateBalance([pt(1, -1), pt(2, -1), pt(3, 1)], { start: 100, riskPct: 60, mode: "fixed", useTradeRisk: false });
+    expect(s.trades.map((t) => t.balance)).toEqual([40, 0]);
+    expect(s.trades[1].pnl).toBe(-40);
+    expect(s.ruined).toBe(true);
+    expect(s.skippedAfterRuin).toBe(1);
+  });
+
+  it("per-trade risk: uses each trade's own %, falls back to the default and counts the fallbacks", () => {
+    const s = simulateBalance([pt(1, 1, 2), pt(2, 1, null), pt(3, 1)], { ...base, mode: "fixed", useTradeRisk: true });
+    expect(s.trades.map((t) => [t.riskPct, t.fallback, t.pnl])).toEqual([
+      [2, false, 20],
+      [1, true, 10],
+      [1, true, 10],
+    ]);
+    expect(s.fallbackCount).toBe(2);
+  });
+
+  it("a recorded risk of 0 counts as missing (fallback), not as a free trade", () => {
+    const s = simulateBalance([pt(1, 1, 0), pt(2, 1, -2)], { ...base, mode: "fixed", useTradeRisk: true });
+    expect(s.trades.map((t) => [t.riskPct, t.fallback, t.pnl])).toEqual([[1, true, 10], [1, true, 10]]);
+    expect(s.fallbackCount).toBe(2);
+  });
+
+  it("float dust left after a wipe-out still counts as ruin and clamps to exactly 0", () => {
+    const s = simulateBalance(Array.from({ length: 11 }, (_, i) => pt(i + 1, -1)), { start: 0.3, riskPct: 10, mode: "fixed", useTradeRisk: false });
+    expect(s.ruined).toBe(true);
+    expect(s.end).toBe(0);
+    expect(s.trades).toHaveLength(10);
+    expect(s.skippedAfterRuin).toBe(1);
+  });
+
+  it("without useTradeRisk the recorded risk is ignored and nothing counts as a fallback", () => {
+    const s = simulateBalance([pt(1, 1, 5)], { ...base, mode: "fixed" });
+    expect(s.trades[0]).toMatchObject({ riskPct: 1, fallback: false, pnl: 10 });
+    expect(s.fallbackCount).toBe(0);
+  });
+
+  it("risk is a percent, not a fraction: 1 means 1%", () => {
+    expect(simulateBalance([pt(1, 1)], { ...base, riskPct: 0.5, mode: "fixed" }).end).toBe(1005);
+  });
+
+  it("fees come off every trade, including breakevens, and can turn a small win into a loss", () => {
+    const s = simulateBalance([pt(1, 0), pt(2, 0.05)], { ...base, mode: "fixed", feePerTrade: 2 });
+    expect(s.trades.map((t) => t.pnl)).toEqual([-2, expect.closeTo(-1.5, 9)]);
+    expect(s.largestWin).toBeNull();
+    expect(s.end).toBeCloseTo(996.5, 9);
+  });
+
+  it("does no rounding (that is for display)", () => {
+    expect(simulateBalance([pt(1, 1)], { ...base, start: 333.33 }).end).toBe(333.33 + 333.33 * 0.01);
   });
 });

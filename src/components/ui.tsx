@@ -143,7 +143,9 @@ export function Segmented<T extends string>({
   options,
   className,
   size = "md",
+  label,
 }: {
+  label?: string;
   value: T | null;
   onChange: (v: T) => void;
   options: { value: T; label: React.ReactNode; tone?: string }[];
@@ -151,7 +153,7 @@ export function Segmented<T extends string>({
   size?: "sm" | "md";
 }) {
   return (
-    <div className={cn("inline-flex rounded-lg border border-line bg-panel-2 p-0.5", className)} role="radiogroup">
+    <div className={cn("inline-flex rounded-lg border border-line bg-panel-2 p-0.5", className)} role="radiogroup" aria-label={label}>
       {options.map((o) => {
         const active = o.value === value;
         return (

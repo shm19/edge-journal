@@ -15,7 +15,7 @@ Config: `vitest.config.mts` (`.mts` so Vite loads it as ESM). `testTimeout` is 3
 | Pure logic | `src/lib/*.test.ts` | No DB, no mocks. Build views with `test/fixtures.ts` (`makeIdea`, `makeScenario`, `makeMistake`, `makeSetup`, `makeTag`). |
 | Server logic (DB) | `src/lib/{queries,actions*}.test.ts`, `src/db/seed.test.ts`, `src/app/api/routes.test.ts` | Real SQLite in a temp dir. |
 | Auth | `src/lib/auth.test.ts`, `session.test.ts`, `login-guard.test.ts`, `src/proxy.test.ts` | `next/headers` and `next/navigation` mocked. |
-| Components | `src/components/ui/select.test.tsx` tests `Select` itself (19 tests) and `src/components/ui/date-picker.test.tsx` the calendar pickers (50 tests, `Date` faked to 2026-10-02 23:30 UTC), `src/components/nav.test.tsx` the "n" shortcut (3 tests); suite total 452 in 29 files; `src/components/**/*.test.tsx` (`test/select.ts` `chooseOption(user, label, option)` drives the custom `Select`; `test/setup-dom.ts` polyfills `ResizeObserver` and `scrollIntoView`) | `// @vitest-environment jsdom`, React Testing Library; `test/setup-dom.ts` adds jest-dom matchers. |
+| Components | `src/components/ui/select.test.tsx` tests `Select` itself (19 tests) and `src/components/ui/date-picker.test.tsx` the calendar pickers (50 tests, `Date` faked to 2026-10-02 23:30 UTC), `src/components/nav.test.tsx` the "n" shortcut (3 tests); `src/components/balance-form.test.tsx` (form + results, 18 tests) and `balance-card.test.tsx` (4 tests); suite total 501 in 32 files; `src/components/**/*.test.tsx` (`test/select.ts` `chooseOption(user, label, option)` drives the custom `Select`; `test/setup-dom.ts` polyfills `ResizeObserver` and `scrollIntoView`) | `// @vitest-environment jsdom`, React Testing Library; `test/setup-dom.ts` adds jest-dom matchers. |
 
 ## Temp-DB helper: `tempDb` (`test/db.ts`)
 The DB opens lazily and caches its connection, so each test file does:
@@ -39,7 +39,7 @@ The DB is migrated and seeded on first use, so setups, tags, scenario types and 
 ## Thresholds (`vitest.config.mts`, enforced by `npm run test:coverage`)
 | Scope | Lines / branches |
 |---|---|
-| `src/lib/{stats,price,tz,format,validation,editor-shape,metrics,analytics,status}.ts` (pure logic) | 100 % / 100 % |
+| `src/lib/{stats,price,tz,format,validation,editor-shape,metrics,analytics,status,date-input,balance}.ts` (pure logic) | 100 % / 100 % |
 | `src/lib/{queries,actions,settings,auth,session,login-guard,csv,image-sniff}.ts`, `src/db/seed.ts`, `src/app/api/**` | ≥ 90 % / ≥ 90 % |
 | Everything included | ≥ 80 % (lines, branches, functions, statements) |
 
