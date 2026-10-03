@@ -80,7 +80,14 @@ SQLite does not index foreign keys, so these are explicit: `scenarios(idea_id)`,
 3. Migrations run automatically on the first DB use.
 4. Restart the dev server.
 
-The seed runs once on an empty DB. Later additive seed changes go in `upgrade()` (`src/db/seed.ts`), gated by `settings.seedVersion` / `SEED_VERSION`, so items the user has deleted are not re-added.
+The fresh seed runs once, only when the `seedVersion` setting is absent **and** the DB holds no setups, scenario types, tags, mistake types or ideas. `seedVersion` is the "already seeded" marker: emptying setups and scenario types in the UI and restarting never re-seeds (that used to fail with `UNIQUE constraint failed: mistake_types.name` on every request), and an older DB that has data but no marker goes through `upgrade()` as version 1. Later additive seed changes go in `upgrade()` (`src/db/seed.ts`), gated by `settings.seedVersion` / `SEED_VERSION`, so items the user has deleted are not re-added.
+
+### Migration safety (`src/db/migrate.ts`)
+`open()` in `src/db/index.ts` calls `migrateSafely()` instead of drizzle's `migrate()` alone:
+1. **Rollback guard.** More applied migrations in `__drizzle_migrations` than this build knows → it refuses to start ("This database is newer than this version…"). Migrations are forward-only; to go back, restore a backup.
+2. **Pre-migrate copy.** With migrations pending on a non-empty existing DB (never on a fresh one) it first writes a consistent copy with `VACUUM INTO` to `<DATA_DIR>/backups/pre-migrate-<unix ts>.db` (dir 0700, file 0600, the newest 3 kept). If the copy can't be written, nothing is migrated.
+3. **Foreign keys off while migrating.** `PRAGMA foreign_keys = OFF` is set *before* `migrate()`, because the pragma is a no-op inside the migrator's transaction. drizzle-kit's table-recreate pattern (`DROP TABLE ideas` …) would otherwise cascade-delete `scenarios`, `attachments`, `idea_mistakes`… The pending migrations are applied by `migrateSafely()` itself (same steps and `__drizzle_migrations` rows as drizzle's migrator, which can't be wrapped because it issues a raw `BEGIN`), inside ONE transaction that also runs `PRAGMA foreign_key_check`. More violations than before (damage that already existed doesn't block startup) throws, so everything rolls back, the applied-migration count is unchanged and every restart refuses again until fixed. Foreign keys are switched back on in every case.
+A failing migration is rolled back the same way, so the DB is left as it was. Tests: `src/db/migrate.test.ts` (additive path, backup created and pruned, newer-DB refusal, simulated destructive migration, failure paths) and `src/db/index.test.ts`.
 
 Seed version history:
 - **v2** adds the "Skip reason" tag group.

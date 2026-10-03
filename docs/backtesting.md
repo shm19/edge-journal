@@ -51,7 +51,7 @@ This imports the trades into the journal DB.
 Keep backtests in their own data dir so they never touch real data. Run the standalone build on port 3200:
 1. Build and copy the assets:
    ```bash
-   npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && cp -r drizzle .next/standalone/drizzle
+   npm run build && cp -r .next/static .next/standalone/.next/static && cp -r drizzle .next/standalone/drizzle
    ```
 2. Start the server from the standalone folder:
    ```bash

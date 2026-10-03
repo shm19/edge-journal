@@ -1,11 +1,18 @@
-# Edge Journal — checkpoint (2026-10-02, session 4)
+# Edge Journal — checkpoint (2026-10-03, v0.2.0 candidate)
 
 Personal, self-hosted crypto trading journal. **Agents: start with `AGENTS.md`** (doc index + conventions). Setup and deploy instructions are in `README.md`. The original plan is in `/Users/shm/.claude/plans/do-a-comperhensive-product-stateless-cloud.md`.
 
 **To resume:** tell Claude "continue the Edge Journal plan from CHECKPOINT.md" — it should do the **next unchecked step** in the PLAN section only, then stop for review.
 
-## Status: v1 complete; PM, QA and backtest findings fixed
-`npm test` (41 passed), `typecheck`, `lint` and `build` are all clean. Changes since the review round:
+## Status (2026-10-03): v0.2.0 candidate
+- All plan steps (0 to 7, incl. 2b and 3b) are done; the launch audit is done and its fixes are applied ([docs/launch-audit-2026-10-03.md](docs/launch-audit-2026-10-03.md)).
+- SSH / no-Docker deployment tooling is added (`scripts/server.sh`, `deploy/`, [docs/deployment.md](docs/deployment.md)); it has only been simulated locally, never run against a real server.
+- Checks: 723 unit / component tests in 44 files (99.8 % line coverage, thresholds met) and 19 e2e tests, `npm run check` and `npm run e2e` green.
+- Release notes are in `CHANGELOG.md` (`[0.2.0]`); tagging `v0.2.0` is still to do.
+- Next: commit and tag, then the first real deploy (see "Launch audit and deployment" below), then pick from the Backlog.
+
+## Earlier status (session 4): v1 complete; PM, QA and backtest findings fixed
+At the time: 41 unit tests, `typecheck`, `lint` and `build` clean. Changes since the review round:
 
 **Security**
 - Open redirect after login fixed (`safeNext`). The `?next=` parameter now keeps its query string.
@@ -67,10 +74,11 @@ Personal, self-hosted crypto trading journal. **Agents: start with `AGENTS.md`**
 
 ## Running instances (local)
 - **Dev server:** `preview_start edge-journal-dev` on http://localhost:3100. Data in `.data-dev` is QA test data and can be thrown away.
-- **Backtest instance:** http://127.0.0.1:3200, the production build from `.next/standalone`, data in `.data-backtest`. To restart:
+- **Backtest instance:** http://127.0.0.1:3200, the production build from `.next/standalone`, data in `.data-backtest`. It is **not** started automatically and the standalone folder is a snapshot: **rebuild after every release** and re-copy the static files, then restart. The exact commands (build + copy `.next/static` and `drizzle` into `.next/standalone`, then start) are in [docs/backtesting.md](docs/backtesting.md); the start line is:
   ```bash
   cd .next/standalone && set -a && . ../../.env.local && set +a && PORT=3200 HOSTNAME=127.0.0.1 DATA_DIR=$PWD/../../.data-backtest COOKIE_SECURE=false NODE_ENV=production node server.js
   ```
+  I have not re-run this since the launch-audit changes; if it fails, rebuild first.
 - The password for both is `APP_PASSWORD` in `.env.local`.
 - Use **Node 22**: `export PATH=/Users/shm/.nvm/versions/node/v22.16.0/bin:$PATH`.
 
@@ -556,16 +564,28 @@ Add `npm run e2e`.
 - **Math:** add `simulateBalance(points, { start, riskPct, mode, useTradeRisk })` as a pure function in `src/lib/stats.ts`, with unit tests (compounding vs fixed, losing streaks, zero trades). For each trade, `pnl = base × riskPct × R`, where `base` is the current balance when compounding or the starting balance when fixed.
 - **Done when:** the numbers match a hand calculation on a known set (e.g. +2R, −1R, +3R at 1% on $1,000, both modes); it works with filters; it's linked from the dashboard and setup pages.
 
+## Launch audit and deployment (2026-10-03)
+- **Done:** a pre-launch audit (fresh-clone build and e2e, ~7,000 independent number checks, upgrade / backup / restore, security, first-run walkthrough, whole-codebase review), every P0/P1 and the cheap P2s fixed, and SSH / no-Docker deployment tooling added. Results, limitations and the deferred P2 list: [docs/launch-audit-2026-10-03.md](docs/launch-audit-2026-10-03.md). Not done: performance at scale, Docker and the SSH path against real systems.
+- **Commits:** `9223112` (audit fixes), `f459f72` (SSH deployment tooling), then the docs commit
+- **Guide:** [docs/deployment.md](docs/deployment.md). First-time deploy, from the laptop (server needs Debian/Ubuntu with systemd and a sudo user):
+  ```bash
+  cp deploy/deploy.env.example .deploy.env     # set SERVER=you@1.2.3.4
+  ./scripts/server.sh doctor                   # read-only; fix what it lists
+  ./scripts/server.sh init                     # once; --install-node / --add-swap if doctor says so; asks for the app password
+  git status                                   # commit first: deploy ships `git archive HEAD`
+  ./scripts/server.sh deploy
+  ./scripts/server.sh tunnel                   # open http://localhost:3000
+  ./scripts/server.sh pull-backups             # off-site copy; automate it (see the guide)
+  ```
+
 ## Backlog (not scheduled)
 - Balance simulator extras: max drawdown in R, a per-month table, a loading skeleton for the Run button.
 - Date picker polish from the Step 6 reviews: per-chip clear, preset wording, calendar-button tab order, trailing week rows, `emptyIdea()` clock at render.
 - Test polish from the Step 3b review: `functions: 100` on the pure group, a stronger `metrics.test.ts`, `tempDb()` cleanup, make e2e specs independent (setup project), scope a few e2e locators, explicit env keys in the e2e web server, one shared e2e data-dir constant.
 - Filter by "No tag" in the filter bar (the analytics "No tag" rows have no matching filter).
-- Login throttle: take the rightmost `X-Forwarded-For`, escalating locks, size cap; session versioning for logout-everywhere; auth assert in `loadIdeas`.
+- Session versioning for logout-everywhere (today: rotate `SESSION_SECRET` / `APP_PASSWORD`); auth assert in `loadIdeas`. (The login throttle itself was reworked in the launch audit.)
 - Deferred review items: P2-8 (warnings for dropped setup/type), P2-11 (checklist keyed by text), P2-12 (one date concept), P2-13 (mixed-status badge), P2-15 (journal paging).
 - Delete the empty `src/components/ui/` directory if it still exists.
-- The journal table clips its last columns (Entry / R:R / R / Alts) at a 1024 px window because the wrapper is `overflow-hidden`. Consider `overflow-x-auto` or fewer columns (from the Step 2b browser check).
-- Show an error if deleting an idea fails. Right now `idea-actions.tsx` always redirects (from the Step 2 product review).
 - **Git tooling** (from the Step 0 review):
   - a `.githooks/pre-commit` blocking staged `.env*` and `*.db*` (or `gitleaks`);
   - `.gitattributes` (`package-lock.json -diff`, `drizzle/meta/*.json linguist-generated`);
@@ -576,3 +596,8 @@ Add `npm run e2e`.
 - An explicit "Early TP (allowed exception)" exit.
 - Per-KPI greying when the sample is small.
 - Backtest the hammer + thrust setup on 1–2 years per coin: `fetch-1h.py --start …` then `backtest-hammer-thrust.py --from … --to …`.
+- **From the launch audit** (details in [docs/launch-audit-2026-10-03.md](docs/launch-audit-2026-10-03.md)):
+  - Security: `__Host-` cookie, `script-src`, `/_next/image` in the proxy matcher, Docker digest pin / `read_only` / `cap_drop`, `chown` failure on NFS, `docker compose exec -u node` in `backup.sh`, `allowedOrigins` env, `robots.ts`, more `.max()` limits in schemas, `npm audit` in CI.
+  - Data and scripts: prune orphan uploads (never cleaned, in every backup); `tar` of a live uploads dir; `restore.sh` edge cases (symlinks, needs host `sqlite3`); `sudo` note for non-uid-1000 hosts; startup race of two processes; SIGTERM WAL checkpoint; `isFinite` on entry / stop in `stats.ts`; `instrumentation.ts` try/catch; case-insensitive `change-me` check in `preflight.ts`; assert the rollback in the migrate test and do not skip backup tests silently without `sqlite3`.
+  - Editor and UI: "exit looks like a typo" warning for a huge R; a mistake silently flips "Followed my plan?"; the skip reason is asked twice; tab order past ~33 tag chips; Esc in the editor; styled delete confirm; Analytics tabs on an empty journal; 22 "Group by" options; equity-curve ticks; "Needs attention" nag wall; Settings validation messages, 0% default risk and label association; dashboard Setups card truncation at 1024 px; `next/dynamic` for charts and markdown.
+  - Two tabs editing one idea are last-write-wins (an `updatedAt` precondition would fix it).

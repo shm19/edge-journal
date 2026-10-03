@@ -12,7 +12,10 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | [docs/testing.md](docs/testing.md) | Before writing or changing tests: how to run them, the `tempDb` helper, fixtures, mocking rules, coverage thresholds and the list of v8-ignored lines. |
 | [docs/backtesting.md](docs/backtesting.md) | For backtest scripts, importing trades, or the separate backtest instance. |
 | [docs/e2e.md](docs/e2e.md) | Before adding or changing a browser flow test. Covers how `npm run e2e` runs (port 3300, temp DB, system Chrome) and the spec order. |
-| [README.md](README.md) | User-facing: features, local run, Docker deploy, backups. |
+| [docs/security.md](docs/security.md) | Before touching auth, sessions, the login throttle, uploads/exports or deploy settings: threat model, protections, limitations, deployer checklist. |
+| [docs/deployment.md](docs/deployment.md) | Before touching `scripts/server.sh`, `deploy/*` or anything about getting the app onto a server: the SSH / no-Docker path (doctor, init, deploy, rollback, restore, pull-backups), server layout, data-safety invariants I1-I9, security notes, troubleshooting. |
+| [docs/launch-audit-2026-10-03.md](docs/launch-audit-2026-10-03.md) | What the pre-launch audit checked and found, what was fixed, what was **not** done (no scale measurement, Docker and the SSH path never run for real) and the deferred P2 list. |
+| [README.md](README.md) | User-facing: features, local run, SSH deploy (main) and Docker alternative, backups. |
 | [CHECKPOINT.md](CHECKPOINT.md) | **Current status**, what was done last, running instances, next ideas. Update it when you finish a chunk of work. |
 
 ## 60-second orientation
@@ -46,6 +49,7 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint. React-compiler rules are on: no `setState` in effects, no ref reads during render |
 | `npm run build` | Production build (standalone output) |
+| `npm run server -- <command>` | Laptop-side deploy tool (`scripts/server.sh`: doctor, init, deploy, status, logs, health, tunnel, backup, pull-backups, restore, rollback; needs `.deploy.env`, see [docs/deployment.md](docs/deployment.md)) |
 | `npm run db:generate` | Generate a Drizzle migration after editing `src/db/schema.ts` |
 
 ## Definition of done for any change
@@ -96,7 +100,11 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | Group statuses / "open" | `src/lib/status.ts` only (`STATUS_BUCKETS`, `inBuckets`, `isOpen`) |
 | New metric | `Summary` / `summarize()` in `src/lib/stats.ts` (with a test) and `src/lib/metrics.ts` |
 | New status | `IDEA_STATUSES` (`schema.ts`), `STATUS_LABEL` (`format.ts`), `STATUS_COLOR` (`components/bits.tsx`; both are `Record<IdeaStatus, …>` so a missing entry fails the type-check), and put it in a bucket in `src/lib/status.ts` (`status.test.ts` fails until you do). |
-| Seed data (setups, tags, scenario types) | `src/db/seed.ts` |
+| Seed data (setups, tags, scenario types) | `src/db/seed.ts` (the fresh seed is gated on `seedVersion` being absent: never gate it on "tables are empty") |
+| Migrations at startup, pre-migrate backups, newer-DB refusal | `src/db/migrate.ts` (`migrateSafely`); a drop-and-recreate migration is safe because foreign keys are off while it runs |
+| Health check, boot warnings, error pages | `src/app/api/health/route.ts`, `src/lib/preflight.ts` + `src/instrumentation.ts`, `src/app/{error,global-error,not-found}.tsx` |
+| SSH / no-Docker deployment (deploy, rollback, restore, off-site backups) | `scripts/server.sh` (laptop), `deploy/{lib,remote-deploy,remote-admin,server-setup,doctor}.sh` + the systemd units in `deploy/` (server), tests in `src/deploy-scripts.test.ts` (stub systemctl / ssh, real SQLite), guide `docs/deployment.md` |
+| Docker, backups, restore, response headers | `Dockerfile` + `scripts/docker-entrypoint.sh`, `scripts/{backup,restore}.sh` (tested by `src/scripts.test.ts`), `next.config.ts` (all headers; `src/next-config.test.ts`) |
 | Navigation | `src/components/nav.tsx` (desktop sidebar only) |
 | UI primitives | `src/components/ui.tsx` (Button, Input, Field, Card, Badge, Segmented, …; re-exports `Select`), `src/components/ui/select.tsx` (the one dropdown: Radix Popover + cmdk, native-`<select>` API, no raw `<select>` in the app; test helper `test/select.ts`, e2e helper `chooseOption`), `src/components/ui/date-picker.tsx` (UTC calendar popovers: `DateTimeField`, `DateRangePicker`, `Calendar`; pure date maths in `src/lib/date-input.ts`; no native date inputs; e2e helper `setDateTime`), `src/components/bits.tsx` (RValue, badges, Kpi, Markdown) |
 | Charts | `src/components/charts.tsx` (Recharts, client; `EquityChart` takes `money` / `base` for a $ balance curve) |
