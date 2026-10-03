@@ -329,7 +329,7 @@ Output: a prioritized list (P0/P1/P2) with file:line references and a concrete s
 - [x] 5 `npm run check` green (lint, typecheck, `test:coverage` with enforced thresholds, build): 343 tests, 100% lines and branches across the scoped files. `npm run e2e`: 17 passed (32 s on an idle machine).
 - [x] 6 Docs: `docs/testing.md`, `docs/e2e.md`, AGENTS (index, commands, test list).
 - [x] 7 No UI change besides the labels; covered by the e2e settings test.
-- [x] 8 Committed (see `git log`).
+- [x] 8 Committed: `46e36f1`.
 
 **What was done:**
 - `vitest.config.mts` (renamed, CJS warning gone) enforces 100% lines/branches on pure logic, 90% on server logic and API routes, 80% overall; `src/proxy.ts` is included. Components are out of scope until they reach 80% (about 41% now; the e2e run covers them).
