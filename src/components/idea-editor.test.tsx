@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyScenario, newEditorIdea, type EditorIdea } from "@/lib/editor-shape";
@@ -275,6 +275,7 @@ describe("saving", () => {
     await fillPrimary(user, "110");
     await user.click(screen.getByRole("button", { name: /Save/ }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Close time is before open time");
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save/ })).toBeEnabled()); // the transition may still be pending
     await user.click(screen.getByRole("button", { name: /Save/ }));
     expect(saveIdea).toHaveBeenCalledTimes(2);
     expect(push).toHaveBeenCalledWith("/ideas/3");

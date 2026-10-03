@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { firstError, ideaSchema } from "./validation";
 
 const scen = (o: Record<string, unknown> = {}) => ({
@@ -111,5 +112,21 @@ describe("firstError", () => {
     expect(fail(idea({ symbol: "" }))).toBe("Coin: Coin is required");
     expect(fail(idea({ riskPct: "x" }))).toMatch(/^riskPct: /);
     expect(fail(idea({ scenarios: [scen({ entry: "x" })] }))).toBe("Primary · Entry: must be a number");
+  });
+});
+
+describe("firstError fallbacks", () => {
+  it("says 'Invalid input' for an error without issues", () => {
+    expect(firstError(new z.ZodError([]))).toBe("Invalid input");
+  });
+  it("labels scenarios by position when no input is given, and keeps unlabelled fields bare", () => {
+    const issue = (path: (string | number)[], message = "bad") => new z.ZodError([{ code: "custom", path, message }]);
+    expect(firstError(issue(["scenarios", 0, "entry"]))).toBe("Primary · Entry: bad");
+    expect(firstError(issue(["scenarios", 2, "stop"]))).toBe("Alternative #1 · Stop: bad");
+    expect(firstError(issue(["scenarios", 1]), { scenarios: [{ isPrimary: true }, { isPrimary: false }] })).toBe("bad");
+    expect(firstError(issue(["scenarios", 1, "stop"]), { scenarios: [{ isPrimary: true }, { isPrimary: false }] })).toBe("Alternative #1 · Stop: bad");
+    expect(firstError(issue(["scenarios", 0, "weird"]))).toBe("Primary · weird: bad");
+    expect(firstError(issue(["skipReason"]))).toBe("bad");
+    expect(firstError(issue([]))).toBe("bad");
   });
 });

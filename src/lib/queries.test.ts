@@ -213,3 +213,91 @@ describe("migration 0003 indexes", () => {
     }
   });
 });
+
+describe("list queries", () => {
+  it("return seeded rows in name order, and tags grouped then named", () => {
+    const { queries } = ctx;
+    const names = (rows: { name: string }[]) => rows.map((r) => r.name);
+    for (const rows of [queries.listSetups(), queries.listMistakeTypes(), queries.listScenarioTypes()]) {
+      expect(rows.length).toBeGreaterThan(0);
+      expect(names(rows)).toEqual([...names(rows)].sort());
+    }
+    const tags = queries.listTags();
+    expect(tags.map((t) => t.group)).toEqual([...tags.map((t) => t.group)].sort());
+  });
+  it("setupIdeaCount is 0 for an unused setup and getSetup is undefined for a missing one", () => {
+    const { queries } = ctx;
+    expect(queries.setupIdeaCount(999)).toBe(0);
+    expect(queries.getSetup(999)).toBeUndefined();
+  });
+  it("getIdea is undefined for a missing id; loadIdeas is empty on a fresh DB", () => {
+    expect(ctx.queries.getIdea(999)).toBeUndefined();
+    expect(ctx.queries.loadIdeas()).toEqual([]);
+  });
+});
+
+describe("orphans and fallbacks", () => {
+  it("an idea shows its setup; a mistake whose type is gone is named 'Mistake'; unknown tag rows are skipped", async () => {
+    const { db, schema, queries } = ctx;
+    const setup = db.select().from(schema.setups).limit(1).get()!;
+    const id = db.insert(schema.ideas).values({ symbol: "BTC", direction: "long", status: "taken", openedAt: "2026-09-01T10:00:00.000Z", setupId: setup.id }).returning().get().id;
+    const alt = db.insert(schema.scenarioTypes).values({ name: "Fallback probe" }).returning().get();
+    db.insert(schema.scenarios).values([
+      { ideaId: id, isPrimary: true, entry: 100, stop: 90 },
+      { ideaId: id, isPrimary: false, entry: 100, stop: 90, scenarioTypeId: alt.id, exitPrice: 120, exitReason: "target" },
+    ]).run();
+    const altRow = db.select().from(schema.scenarios).where(eq(schema.scenarios.isPrimary, false)).get()!;
+    const type = db.insert(schema.mistakeTypes).values({ name: "Temp" }).returning().get();
+    db.insert(schema.ideaMistakes).values({ ideaId: id, mistakeTypeId: type.id, scenarioId: altRow.id }).run();
+
+    let v = queries.getIdea(id)!;
+    expect(v.setup?.id).toBe(setup.id);
+    expect(v.scenarios.find((s) => !s.isPrimary)?.typeName).toBe("Fallback probe");
+    expect(v.mistakes[0].name).toBe("Temp");
+    expect(v.mistakes[0].linkedName).toBe("Fallback probe");
+
+    // Type-less alternative is labelled "Alternative"; deleting the mistake type cascades the entry away.
+    db.update(schema.scenarios).set({ scenarioTypeId: null }).where(eq(schema.scenarios.id, altRow.id)).run();
+    expect(queries.getIdea(id)!.mistakes[0].linkedName).toBe("Alternative");
+    db.delete(schema.mistakeTypes).where(eq(schema.mistakeTypes.id, type.id)).run();
+    v = queries.getIdea(id)!;
+    expect(v.mistakes).toEqual([]);
+  });
+
+  it("drops child rows whose parent rows are missing (FKs off) instead of crashing", async () => {
+    const { db, schema, queries, } = ctx;
+    const { sqlite } = await import("@/db");
+    const id = db.insert(schema.ideas).values({ symbol: "ETH", direction: "short", status: "taken", openedAt: "2026-09-01T10:00:00.000Z" }).returning().get().id;
+    sqlite.pragma("foreign_keys = OFF");
+    sqlite.exec(`INSERT INTO idea_tags (idea_id, tag_id) VALUES (${id}, 987654)`);
+    sqlite.exec(`INSERT INTO scenarios (idea_id, is_primary, entry, stop) VALUES (987654, 1, 100, 90)`);
+    sqlite.exec(`INSERT INTO idea_mistakes (idea_id, mistake_type_id) VALUES (${id}, 987654)`);
+    sqlite.pragma("foreign_keys = ON");
+    const v = queries.getIdea(id)!;
+    expect(v.tags).toEqual([]);
+    expect(v.scenarios).toEqual([]);
+    expect(queries.loadIdeas()).toHaveLength(1);
+    expect(v.mistakes[0].name).toBe("Mistake");
+  });
+});
+
+describe("more fallbacks", () => {
+  it("loadIdeas attaches files to their idea in id order", () => {
+    const { db, schema, queries } = ctx;
+    const id = db.insert(schema.ideas).values({ symbol: "BTC", direction: "long", status: "taken", openedAt: "2026-09-01T10:00:00.000Z" }).returning().get().id;
+    db.insert(schema.attachments).values([{ ideaId: id, filePath: "a.png", kind: "before" }, { ideaId: id, filePath: "b.png", kind: "after" }]).run();
+    expect(queries.loadIdeas()[0].attachments.map((a) => a.filePath)).toEqual(["a.png", "b.png"]);
+  });
+  it("a missing setup or alternative type (FKs off) degrades to null instead of crashing", async () => {
+    const { db, schema, queries } = ctx;
+    const { sqlite } = await import("@/db");
+    const id = db.insert(schema.ideas).values({ symbol: "BTC", direction: "long", status: "taken", openedAt: "2026-09-01T10:00:00.000Z" }).returning().get().id;
+    sqlite.pragma("foreign_keys = OFF");
+    sqlite.exec(`UPDATE ideas SET setup_id = 987654 WHERE id = ${id}`);
+    sqlite.exec(`INSERT INTO scenarios (idea_id, is_primary, entry, stop, scenario_type_id) VALUES (${id}, 1, 100, 90, 987654)`);
+    sqlite.pragma("foreign_keys = ON");
+    const v = queries.getIdea(id)!;
+    expect(v.setup).toBeNull();
+    expect(v.scenarios[0].typeName).toBeNull();
+  });
+});

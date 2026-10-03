@@ -9,7 +9,9 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | [docs/product.md](docs/product.md) | Before changing **what** the app does. Covers who it's for, the core model, design decisions and non-goals. |
 | [docs/architecture.md](docs/architecture.md) | Before changing **how** it works. Covers request flow, folders, server/client split, auth, conventions. |
 | [docs/data-model.md](docs/data-model.md) | Before touching the DB, R math or stats. Covers tables, statuses, R definitions and migrations. |
+| [docs/testing.md](docs/testing.md) | Before writing or changing tests: how to run them, the `tempDb` helper, fixtures, mocking rules, coverage thresholds and the list of v8-ignored lines. |
 | [docs/backtesting.md](docs/backtesting.md) | For backtest scripts, importing trades, or the separate backtest instance. |
+| [docs/e2e.md](docs/e2e.md) | Before adding or changing a browser flow test. Covers how `npm run e2e` runs (port 3300, temp DB, system Chrome) and the spec order. |
 | [README.md](README.md) | User-facing: features, local run, Docker deploy, backups. |
 | [CHECKPOINT.md](CHECKPOINT.md) | **Current status**, what was done last, running instances, next ideas. Update it when you finish a chunk of work. |
 
@@ -38,7 +40,9 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | Command | Purpose |
 |---|---|
 | `npm run dev` | Dev server (or `preview_start edge-journal-dev`, configured in `../.claude/launch.json`, on port 3100 with data in `.data-dev`) |
-| `npm test` | Vitest (component tests use React Testing Library with `// @vitest-environment jsdom`; `test/setup-dom.ts` adds the matchers): `src/lib/*.test.ts` (R math, stats, analytics, status buckets, price parsing, timezones) plus DB-backed tests (`queries.test.ts`, `actions.test.ts`, `actions-guards.test.ts`, `seed.test.ts`, `app/api/routes.test.ts`; `SESSION_SECRET` is set in `test/setup.ts`; `test/db.ts` gives each a temp DB, `test/fixtures.ts` builds `IdeaView`s without one) |
+| `npm test` | Vitest (component tests use React Testing Library with `// @vitest-environment jsdom`; `test/setup-dom.ts` adds the matchers): `src/lib/*.test.ts` (R math, stats, analytics, status buckets, price parsing, timezones) plus DB-backed tests (`queries.test.ts`, `actions.test.ts`, `actions-guards.test.ts`, `actions-crud.test.ts`, `auth.test.ts`, `seed.test.ts`, `app/api/routes.test.ts`; `SESSION_SECRET` is set in `test/setup.ts`; `test/db.ts` gives each a temp DB, `test/fixtures.ts` builds `IdeaView`s without one) |
+| `npm run e2e` | Playwright browser tests against a production build on port 3300 with a throwaway DB (system Chrome, ~1.5 min). See [docs/e2e.md](docs/e2e.md) |
+| `npm run test:coverage` | Vitest with v8 coverage; fails below the thresholds in `vitest.config.mts` (see [docs/testing.md](docs/testing.md)) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint. React-compiler rules are on: no `setState` in effects, no ref reads during render |
 | `npm run build` | Production build (standalone output) |

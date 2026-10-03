@@ -1,5 +1,6 @@
 node_modules
 .next
+.next-e2e
 .git
 # app data & secrets never enter the image build context
 /data

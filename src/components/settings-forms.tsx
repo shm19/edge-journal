@@ -359,17 +359,17 @@ function TypeManager({
       />
       {editing && (
         <div className="mx-4 mb-3 grid grid-cols-[1fr_2fr_auto] gap-3 rounded-lg border border-accent/40 bg-accent/[0.04] p-3">
-          <Field label="Name">
-            <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} autoFocus />
+          <Field label="Name" htmlFor={`${kind}-type-name`}>
+            <Input id={`${kind}-type-name`} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} autoFocus />
           </Field>
-          <Field label="Description">
-            <Input value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
+          <Field label="Description" htmlFor={`${kind}-type-description`}>
+            <Input id={`${kind}-type-description`} value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
           </Field>
           <div className="flex items-end gap-2">
-            <Button variant="primary" onClick={save} disabled={pending || !editing.name.trim()}>
+            <Button variant="primary" onClick={save} disabled={pending || !editing.name.trim()} aria-label="Save type">
               <Check className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" onClick={() => setEditing(null)}>
+            <Button variant="ghost" onClick={() => setEditing(null)} aria-label="Cancel">
               <X className="h-4 w-4" />
             </Button>
           </div>

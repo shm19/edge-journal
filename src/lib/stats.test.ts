@@ -233,3 +233,24 @@ describe("tradeMistakeCost", () => {
     expect(tradeMistakeCost([m(null, 7), m(-1, 8)])).toBe(-1);
   });
 });
+
+describe("plannedRR guards", () => {
+  it("is null for a missing/non-finite target or zero risk, and signed per direction", () => {
+    expect(plannedRR("long", 100, 90, null)).toBeNull();
+    expect(plannedRR("long", 100, 90, Number.NaN)).toBeNull();
+    expect(plannedRR("long", 100, 100, 120)).toBeNull();
+    expect(plannedRR("long", 100, 90, 130)).toBe(3);
+    expect(plannedRR("short", 100, 110, 70)).toBe(3);
+  });
+});
+
+describe("compareScenarios with nothing to compare", () => {
+  it("returns zero pairs and unknown (null) deltas", () => {
+    const c = compareScenarios([]);
+    expect(c.pairs).toBe(0);
+    expect(c.deltaTotalR).toBe(0);
+    expect(c.deltaExpectancy).toBeNull();
+    expect(c.deltaWinRate).toBeNull();
+    expect(c.variantBetterCount).toBe(0);
+  });
+});

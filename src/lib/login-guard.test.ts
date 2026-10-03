@@ -53,3 +53,10 @@ describe("login throttle", () => {
     expect(isLocked("old", 1)).toBe(false); // pruned, not merely expired
   });
 });
+
+describe("safeNext: tab/newline smuggling", () => {
+  it("rejects a path that the URL parser would turn into another origin", () => {
+    expect(safeNext("/\t/evil.com")).toBe("/");
+    expect(safeNext("/\n/evil.com")).toBe("/");
+  });
+});

@@ -46,3 +46,21 @@ describe("timezone conversion", () => {
     expect(zonedDate("2026-09-30T22:00:00.000Z", "UTC")).toBe("2026-09-30");
   });
 });
+
+describe("parsePrice edge cases", () => {
+  it("accepts a trailing dot and rejects overflow to Infinity", () => {
+    expect(parsePrice("5.")).toBe(5);
+    expect(parsePrice("1e999")).toBeNull();
+  });
+});
+
+describe("tz edge cases", () => {
+  it("returns empty / null on blank or invalid input", () => {
+    expect(isoToZonedInput(null)).toBe("");
+    expect(isoToZonedInput("not a date")).toBe("");
+    expect(zonedInputToIso("2026-09-30")).toBeNull();
+  });
+  it("accepts seconds in the wall-clock string", () => {
+    expect(zonedInputToIso("2026-09-30T22:00:30", "UTC")).toBe("2026-09-30T22:00:30.000Z");
+  });
+});

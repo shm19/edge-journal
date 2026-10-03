@@ -76,3 +76,41 @@ describe("upgrade from seed version 1", () => {
     expect(db.select().from(schema.mistakeTypes).all()).toHaveLength(0);
   });
 });
+
+describe("upgrade from seed version 2 and 3", () => {
+  const stamp = (v: number) => ctx.db.insert(ctx.schema.settings).values({ key: "seedVersion", value: String(v) }).onConflictDoUpdate({ target: ctx.schema.settings.key, set: { value: String(v) } }).run();
+
+  it("v2 keeps existing mistake types, turns an unused Mistake tag into nothing, and keeps existing skip reasons", () => {
+    const { db, schema, seed } = ctx;
+    stamp(2);
+    const before = db.select().from(schema.mistakeTypes).all().length;
+    const skips = db.select().from(schema.tags).where(eq(schema.tags.group, schema.SKIP_REASON_GROUP)).all().length;
+    db.insert(schema.tags).values({ name: "Unused", group: "Mistake", color: "#ef4444" }).run();
+    seed.seedIfEmpty(db);
+    const types = db.select().from(schema.mistakeTypes).all();
+    expect(types).toHaveLength(before + 1); // existing types untouched, the unused tag became one new type
+    expect(types.map((t) => t.name)).toContain("Unused");
+    expect(db.select().from(schema.ideaMistakes).all()).toHaveLength(0);
+    expect(db.select().from(schema.tags).where(eq(schema.tags.group, "Mistake")).all()).toHaveLength(0);
+    expect(db.select().from(schema.tags).where(eq(schema.tags.group, schema.SKIP_REASON_GROUP)).all()).toHaveLength(skips);
+    expect(setting("seedVersion")).toBe(String(seed.SEED_VERSION));
+  });
+
+  it("v1 with skip reasons already present does not duplicate them", () => {
+    const { db, schema, seed } = ctx;
+    db.delete(schema.settings).where(eq(schema.settings.key, "seedVersion")).run();
+    const skips = db.select().from(schema.tags).where(eq(schema.tags.group, schema.SKIP_REASON_GROUP)).all().length;
+    seed.seedIfEmpty(db);
+    expect(db.select().from(schema.tags).where(eq(schema.tags.group, schema.SKIP_REASON_GROUP)).all()).toHaveLength(skips);
+  });
+
+  it("v3 only drops the old timezone setting", () => {
+    const { db, schema, seed } = ctx;
+    stamp(3);
+    db.insert(schema.settings).values({ key: "timezone", value: "Asia/Tokyo" }).run();
+    db.delete(schema.mistakeTypes).run();
+    seed.seedIfEmpty(db);
+    expect(setting("timezone")).toBeUndefined();
+    expect(db.select().from(schema.mistakeTypes).all()).toHaveLength(0);
+  });
+});

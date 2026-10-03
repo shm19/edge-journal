@@ -243,3 +243,10 @@ describe("deleteScenarioType", () => {
     expect(v.scenarios[0].isPrimary).toBe(true);
   });
 });
+
+describe("saveIdea: only unknown tags", () => {
+  it("links nothing and still saves", async () => {
+    const id = await saved(idea({ tagIds: [987654] }));
+    expect(ctx.queries.getIdea(id)!.tags).toEqual([]);
+  });
+});

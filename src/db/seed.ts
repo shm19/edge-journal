@@ -165,6 +165,7 @@ function upgrade(db: DB) {
   const version = row ? Number(row.value) : 1;
   if (version >= SEED_VERSION) return;
   db.transaction((tx) => {
+    /* v8 ignore else -- always true while SEED_VERSION is 4; becomes live when the next upgrade step is added */
     if (version < 4) {
       // The app is UTC-only now; drop the old configurable timezone.
       tx.delete(schema.settings).where(eq(schema.settings.key, "timezone")).run();

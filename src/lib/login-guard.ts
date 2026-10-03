@@ -7,6 +7,7 @@ export function safeNext(raw: string): string {
     const u = new URL(raw, "http://local.invalid");
     return u.origin === "http://local.invalid" ? `${u.pathname}${u.search}` : "/";
   } catch {
+    /* v8 ignore next -- new URL(path, base) cannot throw for a string that starts with "/"; defensive */
     return "/";
   }
 }

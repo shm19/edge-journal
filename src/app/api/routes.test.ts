@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { tempDb } from "../../../test/db";
 
@@ -49,6 +50,10 @@ describe("POST /api/uploads", () => {
     const { fileName } = await res.json();
     expect(fileName).toMatch(/^[a-z0-9]+-[0-9a-f]{12}\.png$/);
     expect(fs.readFileSync(path.join(c.UPLOAD_DIR, fileName)).equals(PNG)).toBe(true);
+  });
+  it("rejects a body that is not valid multipart", async () => {
+    const req = new Request("http://localhost/api/uploads", { method: "POST", headers: { "content-type": "multipart/form-data; boundary=x" }, body: "garbage" });
+    expect(await (await c.uploads.POST(req)).json()).toEqual({ error: "Couldn't read the upload" });
   });
   it("rejects non-images, missing files, and oversized files", async () => {
     expect((await c.uploads.POST(upload(new Blob(["<svg/>"]), "a.png"))).status).toBe(415);
@@ -130,6 +135,36 @@ describe("GET /api/export", () => {
     expect(row.startsWith("1,taken,2026-09-01T10:00:00.000Z")).toBe(true);
     expect(row).toContain("BTC,long");
     expect(row).toContain(`"'=HYPERLINK(""x"")"`);
+  });
+  it("exports checklist, tags, mistakes and alternatives into the CSV", async () => {
+    const setup = c.db.select().from(c.schema.setups).limit(1).get()!;
+    c.db.update(c.schema.setups).set({ checklist: ["Level tested", "HTF bias"] }).where(eq(c.schema.setups.id, setup.id)).run();
+    const tag = c.db.select().from(c.schema.tags).limit(1).get()!;
+    const mtype = c.db.select().from(c.schema.mistakeTypes).limit(1).get()!;
+    const stype = c.db.select().from(c.schema.scenarioTypes).limit(1).get()!;
+    const sc = (o: object) => ({ scenarioTypeId: null, isPrimary: false, entry: 100, stop: 90, target: null, exitPrice: null, exitReason: null, notes: "", ...o });
+    const r = await c.actions.saveIdea({
+      symbol: "eth", direction: "long", status: "taken", setupId: setup.id, entryTimeframe: "1h", htfBias: "with", regime: null,
+      openedAt: "2026-09-01T10:00:00.000Z", closedAt: "2026-09-01T12:00:00.000Z", followedPlan: true, riskPct: 1, feesUsd: 1, pnlUsd: 2, confidence: 3,
+      checklistState: { "Level tested": true },
+      tagIds: [tag.id],
+      mistakes: [{ mistakeTypeId: mtype.id, note: "oops", costR: 0.5, scenarioIndex: null }, { mistakeTypeId: mtype.id, note: "", costR: null, scenarioIndex: null }],
+      scenarios: [
+        sc({ isPrimary: true, target: 130, exitPrice: 120, exitReason: "target" }),
+        sc({ scenarioTypeId: stype.id, exitPrice: 130, exitReason: "target" }),
+        sc({ exitReason: "not_filled" }),
+        sc({ target: 140 }),
+      ],
+    });
+    expect(r.ok).toBe(true);
+    const row = (await (await get("csv")).text()).split("\n")[1];
+    expect(row).toContain("[x] Level tested; [ ] HTF bias");
+    expect(row).toContain(`${tag.group}:${tag.name}`);
+    expect(row).toContain(`${mtype.name} (0.50R): oops; ${mtype.name}`);
+    expect(row).toContain(`${stype.name}: 100/90/- → 3.00R; Alt: 100/90/- → not filled; Alt: 100/90/140 → open`);
+  });
+  it("falls back to JSON for an unknown format", async () => {
+    expect((await get("xml")).headers.get("content-type")).toBe("application/json");
   });
   it("exports a consistent SQLite backup and cleans its staging dir", async () => {
     await addIdea();

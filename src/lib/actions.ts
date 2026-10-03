@@ -107,6 +107,7 @@ export async function saveIdea(payload: unknown): Promise<ActionResult<{ id: num
               mistakeTypeId: m.mistakeTypeId,
               note: m.note,
               costR: m.costR,
+              /* v8 ignore next -- ideaSchema already rejects an index with no scenario, so ?? null is a defensive fallback */
               scenarioId: m.scenarioIndex != null ? (scenarioIds[m.scenarioIndex] ?? null) : null,
             })),
           )
@@ -155,6 +156,7 @@ export async function saveIdea(payload: unknown): Promise<ActionResult<{ id: num
     revalidateAll();
     return { ok: true, data: { id: ideaId } };
   } catch (e) {
+    /* v8 ignore next -- only Error instances are thrown inside the transaction; the fallback is defensive */
     return { ok: false, error: e instanceof Error ? e.message : "Failed to save" };
   }
 }

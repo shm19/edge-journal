@@ -256,3 +256,106 @@ describe("toEditorIdea -> buildSavePayload -> ideaSchema", () => {
     parse(makeIdea({ status: "forward_test", scenarios: [], r: false, outcome: "miss" }));
   });
 });
+
+describe("newEditorIdea defaults", () => {
+  it("uses the default risk %, or blank when none is given", () => {
+    expect(newEditorIdea({ riskPct: 0.5 }).riskPct).toBe("0.5");
+    expect(newEditorIdea({}).riskPct).toBe("");
+  });
+});
+
+describe("toEditorIdea", () => {
+  it("maps tags, attachments, links and costs; primary first", () => {
+    const alt = makeScenario({ id: 20, isPrimary: false, typeName: "BE stop", scenarioTypeId: 3 });
+    const prim = makeScenario({ id: 30, isPrimary: true, target: 130, r: 1 });
+    const v = makeIdea({
+      id: 5,
+      scenarios: [alt, prim],
+      tags: [{ id: 7, name: "Naked", group: "Level", color: "#000" }],
+      attachments: [{ id: 9, ideaId: 5, filePath: "a.png", caption: "c", kind: "before", createdAt: "" }],
+      mistakes: [
+        makeMistake({ id: 1, costR: 0.5, scenarioId: 20 }),
+        makeMistake({ id: 2, costR: null, scenarioId: 999 }), // link to a scenario that no longer exists
+        makeMistake({ id: 3, costR: null, scenarioId: null }),
+      ],
+      riskPct: 1,
+      pnlUsd: null,
+    });
+    const e = toEditorIdea(v);
+    expect(e.scenarios.map((s) => s.id)).toEqual([30, 20]);
+    expect(e.scenarios[0].target).toBe("130");
+    expect(e.tagIds).toEqual([7]);
+    expect(e.riskPct).toBe("1");
+    expect(e.pnlUsd).toBe("");
+    expect(e.attachments).toMatchObject([{ id: 9, filePath: "a.png", caption: "c", kind: "before" }]);
+    expect(e.mistakes.map((m) => [m.costR, m.scenarioKey === e.scenarios[1].key ? "alt" : m.scenarioKey])).toEqual([["0.5", "alt"], ["", null], ["", null]]);
+  });
+  it("tolerates a null checklist state", () => {
+    const v = makeIdea({ checklistState: null as unknown as Record<string, boolean> });
+    expect(toEditorIdea(v).checklistState).toEqual({});
+  });
+});
+
+describe("observation and scenario removal", () => {
+  it("toObservation clears an auto close time (keeps a typed one) and unlinks mistakes", () => {
+    const i = idea({ closedAt: OPENED, closedAtAuto: true, mistakes: [mistake({ scenarioKey: "x" })] });
+    const o = toObservation(i);
+    expect(o.scenarios).toEqual([]);
+    expect(o.closedAt).toBeNull();
+    expect(o.mistakes[0].scenarioKey).toBeNull();
+    expect(toObservation({ ...i, closedAtAuto: false }).closedAt).toBe(OPENED);
+  });
+  it("removeScenario unlinks only the mistakes that pointed at it", () => {
+    const i = idea({ scenarios: [...idea().scenarios, { ...emptyScenario(false), key: "alt1" }, { ...emptyScenario(false), key: "alt2" }], mistakes: [mistake({ key: "a", scenarioKey: "alt1" }), mistake({ key: "b", scenarioKey: "alt2" })] });
+    const next = removeScenario(i, "alt1");
+    expect(next.scenarios.map((s) => s.key)).not.toContain("alt1");
+    expect(next.mistakes.map((m) => m.scenarioKey)).toEqual([null, "alt2"]);
+  });
+});
+
+describe("editorMistakeCost without a measurable alternative", () => {
+  it("is null when the alternative has no usable prices, or there is no primary", () => {
+    const alt = { ...emptyScenario(false), key: "alt", entry: "", stop: "" };
+    const i = idea({ scenarios: [...idea().scenarios, alt] });
+    expect(editorMistakeCost(i, mistake({ scenarioKey: "alt" }))).toBeNull();
+    const noPrimary = { ...i, scenarios: [{ ...alt, entry: "100", stop: "90", exitPrice: "110" }] };
+    expect(editorMistakeCost(noPrimary, mistake({ scenarioKey: "alt" }))).toBeNull();
+  });
+});
+
+describe("buildSavePayload details", () => {
+  it("maps a not-filled exit to no price, a bare exit price to a manual exit, and links mistakes by position", () => {
+    const base = idea();
+    const alt = { ...emptyScenario(false), key: "alt", entry: "100", stop: "90", exitPrice: "105", exitReason: "" as const };
+    const i = idea({
+      scenarios: [{ ...base.scenarios[0], exitPrice: "120", exitReason: "not_filled" }, alt],
+      attachments: [{ key: "k1", id: 4, filePath: "a.png", caption: "c", kind: "after" }],
+      mistakes: [mistake({ scenarioKey: "alt", costR: "1,5" }), mistake({ key: "m2", scenarioKey: "gone" }), mistake({ key: "m3" })],
+    });
+    const r = buildSavePayload(i);
+    if (!r.ok) throw new Error(r.error);
+    const p = r.payload as { scenarios: { exitPrice: number | null; exitReason: string | null }[]; attachments: unknown[]; mistakes: { scenarioIndex: number | null; costR: number | null }[] };
+    expect(p.scenarios[0]).toMatchObject({ exitPrice: null, exitReason: "not_filled" });
+    expect(p.scenarios[1]).toMatchObject({ exitPrice: 105, exitReason: "manual" });
+    expect(p.attachments).toEqual([{ id: 4, filePath: "a.png", caption: "c", kind: "after" }]);
+    expect(p.mistakes.map((m) => m.scenarioIndex)).toEqual([1, null, null]);
+    expect(p.mistakes[0].costR).toBe(1.5);
+  });
+  it("rejects unparsable target or exit text and names the alternative", () => {
+    const base = idea();
+    const bad = (patch: object) => buildSavePayload(idea({ scenarios: [{ ...base.scenarios[0], ...patch }] }));
+    expect(bad({ target: "abc" })).toMatchObject({ ok: false, error: expect.stringMatching(/^Primary:/) });
+    expect(bad({ exitPrice: "abc" })).toMatchObject({ ok: false });
+    // text in the exit price is tolerated when the trade was never filled (the price is dropped)
+    expect(bad({ exitPrice: "abc", exitReason: "not_filled" }).ok).toBe(true);
+    const withAlt = idea({ scenarios: [base.scenarios[0], { ...emptyScenario(false), entry: "1" }] });
+    expect(buildSavePayload(withAlt)).toMatchObject({ ok: false, error: expect.stringMatching(/^Alternative #1:/) });
+  });
+});
+
+describe("toEditorIdea ordering", () => {
+  it("orders two alternatives by id after the primary", () => {
+    const v = makeIdea({ scenarios: [makeScenario({ id: 9 }), makeScenario({ id: 3, isPrimary: true }), makeScenario({ id: 5 })] });
+    expect(toEditorIdea(v).scenarios.map((s) => s.id)).toEqual([3, 5, 9]);
+  });
+});

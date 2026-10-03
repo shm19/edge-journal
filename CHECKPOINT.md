@@ -90,7 +90,7 @@ Every step must also pass the usual checks: `npm test`, `typecheck`, `lint`, `bu
 
 **After Step 3b:** coverage must not drop below the thresholds.
 
-**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → 3b → 5 → 6 → 7. (Step 0 is done.)
+**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → ~~3b~~ → 5 → 6 → 7. (Step 0 is done.)
 
 **Process for every step and change:** follow [docs/workflow.md](docs/workflow.md).
 1. Scope.
@@ -319,7 +319,28 @@ Run one senior reviewer agent. It should read `AGENTS.md` and all of `docs/` fir
 
 Output: a prioritized list (P0/P1/P2) with file:line references and a concrete suggestion per item, plus a short "tips" section.
 
-### ☐ Step 3b: Full test coverage (safety net before the cleanup refactor)
+### ☑ Step 3b: Full test coverage (done 2026-10-03; run after Step 4 at Shayan's request)
+**Workflow checklist:**
+- [x] 1 Scope: this section.
+- [x] 2 Built with Shayan's lazy-developer skill (two parallel test-only agents: unit/component coverage, Playwright e2e).
+- [x] 3a Code review: no P0, 2 P1 checks (both verified: thresholds fail when raised; the e2e secrets differ from `.env.local`), 13 P2.
+- [—] 3b Product review skipped: no product change (only two accessibility labels in the type editor).
+- [x] 4 Triage (below).
+- [x] 5 `npm run check` green (lint, typecheck, `test:coverage` with enforced thresholds, build): 343 tests, 100% lines and branches across the scoped files. `npm run e2e`: 17 passed (32 s on an idle machine).
+- [x] 6 Docs: `docs/testing.md`, `docs/e2e.md`, AGENTS (index, commands, test list).
+- [x] 7 No UI change besides the labels; covered by the e2e settings test.
+- [x] 8 Committed (see `git log`).
+
+**What was done:**
+- `vitest.config.mts` (renamed, CJS warning gone) enforces 100% lines/branches on pure logic, 90% on server logic and API routes, 80% overall; `src/proxy.ts` is included. Components are out of scope until they reach 80% (about 41% now; the e2e run covers them).
+- 5 `v8 ignore` comments, each justified in `docs/testing.md` (drop the `seed.ts` one when `SEED_VERSION` passes 4).
+- Playwright e2e (17 tests, desktop Chrome via `channel: "chrome"`, port 3300, build dir `.next-e2e`, temp data dir, throwaway secrets). `next.config.ts` gained `distDir: process.env.NEXT_DIST_DIR || ".next"` so the e2e build never overwrites `.next` (your 3100 and 3200 instances); default unchanged.
+- `npm run check` = lint + typecheck + coverage + build. `npm run e2e` is separate (needs the system Chrome).
+- Fixed two accessibility gaps the e2e found: the type editor's Name/Description labels and its icon-only Save/Cancel buttons.
+
+**Review triage:** applied `proxy.ts` coverage, doc fixes, threshold proof, secrets check. Deferred (Backlog): `functions: 100` on the pure group, the stronger `metrics.test.ts`, `tempDb()` cleanup of temp dirs, e2e specs depending on each other's data (run the whole suite, not one file), scoping a few e2e locators, explicit env keys for the e2e server, one shared path constant for the e2e data dir, a Chrome note for future CI.
+
+**Original plan:**
 Goal: every behaviour is covered by tests, so Step 4 can refactor without fear. Currently there are 41 unit tests, covering only `stats`, `price` and `tz`.
 
 **1. Tooling:**
@@ -327,7 +348,7 @@ Goal: every behaviour is covered by tests, so Step 4 can refactor without fear. 
 - Set up a test DB helper: a temp `DATA_DIR` per test file, with a fresh migrated and seeded SQLite DB. Stub or mock `server-only` and `next/cache` (`revalidatePath`) in the Vitest setup.
 - For auth inside actions, mock `requireAuth`, or set a signed cookie through a mocked `next/headers`.
 
-**2. Coverage targets**, enforced in `vitest.config.ts` thresholds:
+**2. Coverage targets**, enforced in `vitest.config.mts` thresholds:
 - **100%** lines and branches for pure logic: `src/lib/{stats,price,tz,format,validation,editor-shape,metrics}.ts`.
 - **≥ 90%** for server logic: `src/lib/{queries,actions,settings,auth,session}.ts`, `src/db/seed.ts` (all upgrade paths v1→v4), and the API routes (`api/uploads`, `api/uploads/[name]`, `api/export` csv/json/db, `api/health`), which are tested by calling the route handlers directly.
 - **≥ 80% overall.**
@@ -478,6 +499,7 @@ Add `npm run e2e`.
 - **Done when:** the numbers match a hand calculation on a known set (e.g. +2R, −1R, +3R at 1% on $1,000, both modes); it works with filters; it's linked from the dashboard and setup pages.
 
 ## Backlog (not scheduled)
+- Test polish from the Step 3b review: `functions: 100` on the pure group, a stronger `metrics.test.ts`, `tempDb()` cleanup, make e2e specs independent (setup project), scope a few e2e locators, explicit env keys in the e2e web server, one shared e2e data-dir constant.
 - Filter by "No tag" in the filter bar (the analytics "No tag" rows have no matching filter).
 - Login throttle: take the rightmost `X-Forwarded-For`, escalating locks, size cap; session versioning for logout-everywhere; auth assert in `loadIdeas`.
 - Deferred review items: P2-8 (warnings for dropped setup/type), P2-11 (checklist keyed by text), P2-12 (one date concept), P2-13 (mixed-status badge), P2-15 (journal paging).

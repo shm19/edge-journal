@@ -79,6 +79,7 @@ export function tagGroups(): string[] {
 export const getSetup = cache((id: number): Setup | undefined => db.select().from(setups).where(eq(setups.id, id)).get());
 
 export function setupIdeaCount(setupId: number): number {
+  /* v8 ignore next -- count() always returns exactly one row; ?? 0 only satisfies the types */
   return db.select({ n: count() }).from(ideas).where(eq(ideas.setupId, setupId)).get()?.n ?? 0;
 }
 

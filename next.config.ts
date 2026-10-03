@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  distDir: process.env.NEXT_DIST_DIR || ".next", // e2e builds into .next-e2e so it never clobbers dev / the backtest instance
   poweredByHeader: false,
   async headers() {
     return [
