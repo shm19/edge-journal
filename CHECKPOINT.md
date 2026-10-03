@@ -526,7 +526,7 @@ Add `npm run e2e`.
 - [x] 5 `npm run check` green (501 tests in 32 files, was 452/29); `npm run e2e` 19/19.
 - [x] 6 Docs: product, data-model, architecture, README, AGENTS, testing, e2e, CHANGELOG.
 - [x] 7 Browser (1280 px): Balance tab (form, hypothetical note, n<20 warning, KPI tiles incl. R total, curve), dashboard "Balance sim" row. Hand check: 12 taken trades, +14.05R, 1% compounding → $1,000 → $1,148.14 (+14.81%).
-- [x] 8 Committed (see `git log`).
+- [x] 8 Committed: `3776a53`.
 
 **Notes:**
 - Rules: risk is in percent (1 = 1%); compounding uses the current balance, fixed uses the starting balance; a fee is charged on every trade including breakevens; ruin clamps the balance to 0 and later trades are not simulated; a recorded risk of 0 counts as missing; a Settings default risk of 0 or less is treated as 1%; numbers are parsed with `parsePrice` (`1,000` works).
