@@ -459,7 +459,7 @@ Add `npm run e2e`.
 - [x] 5 `npm run check` green (362 tests, 26 files; 19 new in `src/components/ui/select.test.tsx`); `npm run e2e` 17/17.
 - [x] 6 Docs: AGENTS, architecture (Dropdowns), testing, CHANGELOG.
 - [x] 7 Browser (1280 px): setup dropdown opens by mouse, shows Live / Testing groups, search filters ("ins" leaves two setups), Enter picks, no console errors.
-- [x] 8 Committed (see `git log`).
+- [x] 8 Committed: `5d7fd97`.
 
 **Notes:**
 - The first builder reported a `select.test.tsx` that did not exist; the review caught it and the tests were then written. Always check claimed tests exist.
