@@ -1,3 +1,4 @@
+import { NOT_CONFIGURED, passwordConfigured } from "@/lib/session";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Sign in" };
@@ -14,7 +15,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <p className="text-xs text-muted">Find what works. Do more of it.</p>
           </div>
         </div>
-        <LoginForm next={next ?? "/"} />
+        {passwordConfigured() ? (
+          <LoginForm next={next ?? "/"} />
+        ) : (
+          <p role="alert" className="rounded-xl border border-line bg-panel p-5 text-sm text-loss">
+            {NOT_CONFIGURED}
+          </p>
+        )}
       </div>
     </main>
   );

@@ -123,7 +123,7 @@ describe("equity + grouping", () => {
     const data = pts([1, -1, 2]).map((p, i) => ({ ...p, tags: [["a"], ["a", "b"], []][i] }));
     const g = groupSummaries(data, (p) => p.tags);
     const byKey = Object.fromEntries(g.map((x) => [x.key, x.summary.count]));
-    expect(byKey).toEqual({ a: 2, b: 1, "—": 1 });
+    expect(byKey).toEqual({ a: 2, b: 1, "Not set": 1 });
   });
 });
 

@@ -1,4 +1,4 @@
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { AlertTriangle, ImagePlus, Loader2, X } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/cn";
 import type { EditorAttachment } from "@/lib/editor-shape";
@@ -9,12 +9,15 @@ export function ScreenshotsCard({
   onChange,
   upload,
   uploading,
+  uploadError,
   dragOver,
 }: {
   attachments: EditorAttachment[];
   onChange: (next: EditorAttachment[]) => void;
   upload: (files: File[]) => void;
   uploading: number;
+  /** The server's reason a file was rejected (wrong type, too large, ...). */
+  uploadError?: string | null;
   dragOver: boolean;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
@@ -42,6 +45,11 @@ export function ScreenshotsCard({
           e.target.value = "";
         }}
       />
+      {uploadError && (
+        <p role="alert" className="mx-4 mb-3 flex items-center gap-1.5 text-sm text-loss">
+          <AlertTriangle className="h-4 w-4 shrink-0" /> {uploadError}
+        </p>
+      )}
       <div className="grid grid-cols-3 gap-3 px-4 pb-4">
         {attachments.map((a) => (
           <div key={a.key} className="overflow-hidden rounded-lg border border-line bg-panel-2">

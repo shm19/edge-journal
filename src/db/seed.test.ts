@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { tempDb } from "../../test/db";
 
 async function load() {
@@ -112,5 +112,68 @@ describe("upgrade from seed version 2 and 3", () => {
     seed.seedIfEmpty(db);
     expect(setting("timezone")).toBeUndefined();
     expect(db.select().from(schema.mistakeTypes).all()).toHaveLength(0);
+  });
+});
+
+describe("seed gate (seedVersion is the 'already seeded' marker)", () => {
+  const rowCounts = () => {
+    const { db, schema } = ctx;
+    return [schema.setups, schema.scenarioTypes, schema.tags, schema.mistakeTypes].map((t) => db.select().from(t).all().length);
+  };
+
+  it("emptying setups and scenario types in the UI and restarting neither fails nor re-seeds", async () => {
+    const { db, schema } = ctx;
+    db.delete(schema.setups).run();
+    db.delete(schema.scenarioTypes).run();
+    const before = rowCounts();
+    expect(before.slice(0, 2)).toEqual([0, 0]);
+
+    // A real restart: drop the cached connection and module cache, reopen the same DATA_DIR.
+    delete (globalThis as { __journalDb?: unknown }).__journalDb;
+    vi.resetModules();
+    const fresh = await import("@/db");
+    const freshSchema = await import("@/db/schema");
+    expect(() => fresh.db.select().from(freshSchema.setups).all()).not.toThrow();
+    expect(fresh.db.select().from(freshSchema.setups).all()).toHaveLength(0);
+    expect(fresh.db.select().from(freshSchema.scenarioTypes).all()).toHaveLength(0);
+    expect(fresh.db.select().from(freshSchema.mistakeTypes).all()).toHaveLength(before[3]);
+    expect(fresh.db.select().from(freshSchema.tags).all()).toHaveLength(before[2]);
+  });
+
+  it("calling seedIfEmpty directly on the emptied DB is a no-op too", () => {
+    const { db, schema, seed } = ctx;
+    db.delete(schema.setups).run();
+    db.delete(schema.scenarioTypes).run();
+    expect(() => seed.seedIfEmpty(db)).not.toThrow();
+    expect(db.select().from(schema.setups).all()).toHaveLength(0);
+  });
+
+  it("a legacy DB with no seedVersion but with data goes through the upgrade path, not a fresh seed", () => {
+    const { db, schema, seed } = ctx;
+    db.delete(schema.settings).where(eq(schema.settings.key, "seedVersion")).run();
+    db.delete(schema.setups).run();
+    db.delete(schema.scenarioTypes).run();
+    const mistakes = db.select().from(schema.mistakeTypes).all().length;
+    expect(() => seed.seedIfEmpty(db)).not.toThrow();
+    expect(db.select().from(schema.setups).all()).toHaveLength(0); // no fresh seed
+    expect(db.select().from(schema.mistakeTypes).all()).toHaveLength(mistakes);
+    expect(setting("seedVersion")).toBe(String(seed.SEED_VERSION));
+  });
+
+  it("a legacy DB whose only data is an idea is not fresh-seeded either", () => {
+    const { db, schema, seed } = ctx;
+    for (const t of [schema.setups, schema.scenarioTypes, schema.tags, schema.mistakeTypes, schema.settings]) db.delete(t).run();
+    db.insert(schema.ideas).values({ symbol: "BTC", direction: "long", status: "taken", openedAt: "2026-09-01T10:00:00.000Z" }).run();
+    seed.seedIfEmpty(db);
+    expect(db.select().from(schema.setups).all()).toHaveLength(0);
+    expect(setting("seedVersion")).toBe(String(seed.SEED_VERSION));
+  });
+
+  it("a truly empty DB without the marker is seeded from scratch", () => {
+    const { db, schema, seed } = ctx;
+    for (const t of [schema.setups, schema.scenarioTypes, schema.tags, schema.mistakeTypes, schema.settings]) db.delete(t).run();
+    seed.seedIfEmpty(db);
+    expect(db.select().from(schema.setups).all().length).toBeGreaterThan(5);
+    expect(setting("seedVersion")).toBe(String(seed.SEED_VERSION));
   });
 });

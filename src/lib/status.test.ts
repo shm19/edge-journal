@@ -3,7 +3,7 @@ import { IDEA_STATUSES } from "@/db/schema";
 import { makeIdea } from "../../test/fixtures";
 import { BIAS_LABEL, EXIT_LABEL, REGIME_LABEL, STATUS_LABEL } from "./format";
 import { BIASES, EXIT_REASONS, REGIMES } from "@/db/schema";
-import { bucketOf, inBuckets, isOpen, STATUS_BUCKETS, type StatusBucket } from "./status";
+import { bucketOf, inBuckets, isHypothetical, isOpen, STATUS_BUCKETS, type StatusBucket } from "./status";
 
 describe("status buckets", () => {
   it("places every IDEA_STATUSES value in exactly one bucket", () => {
@@ -35,6 +35,12 @@ describe("isOpen", () => {
     expect(isOpen(makeIdea({ r: 0 }))).toBe(false); // e.g. not filled scores 0R
     expect(isOpen(makeIdea({ r: false }))).toBe(false); // observation only: no primary
     expect(isOpen(makeIdea({ r: null, outcome: "hit" }))).toBe(false);
+  });
+});
+
+describe("isHypothetical", () => {
+  it("is true for skipped, missed and forward tests only", () => {
+    expect(IDEA_STATUSES.filter(isHypothetical).sort()).toEqual(["forward_test", "missed", "skipped"]);
   });
 });
 

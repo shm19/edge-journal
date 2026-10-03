@@ -26,3 +26,6 @@ export function inBuckets<T extends { status: IdeaStatus }>(list: T[], ...bucket
 export function isOpen(i: { primary: { r: number | null } | null; outcome: string | null }): boolean {
   return i.primary != null && i.primary.r == null && i.outcome == null;
 }
+
+/** Skipped, missed and forward-test results are what would have happened, never realised profit: label them "if taken". */
+export const isHypothetical = (status: IdeaStatus): boolean => ["skips", "forward"].includes(bucketOf(status));

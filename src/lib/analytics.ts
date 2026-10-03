@@ -127,6 +127,8 @@ export function rrBucket(rr: number | null | undefined): string {
 
 /** Group key for ideas with no tag in the grouped dimension (instead of a group literally called "—"). */
 export const NO_TAG = "No tag";
+/** Group key for ideas where the grouped single-value field is empty (HTF bias, market, confidence, …). */
+export const NOT_SET = "Not set";
 
 export function dimensionKeys(dim: string): (p: StatPoint) => string[] {
   if (dim.startsWith("group:")) {
@@ -144,15 +146,15 @@ export function dimensionKeys(dim: string): (p: StatPoint) => string[] {
     case "symbol":
       return (p) => [p.idea.symbol];
     case "timeframe":
-      return (p) => [p.idea.entryTimeframe ?? "—"];
+      return (p) => [p.idea.entryTimeframe ?? NOT_SET];
     case "direction":
       return (p) => [p.idea.direction === "long" ? "Long" : "Short"];
     case "status":
       return (p) => [STATUS_LABEL[p.idea.status]];
     case "bias":
-      return (p) => [p.idea.htfBias ? BIAS_LABEL[p.idea.htfBias] : "—"];
+      return (p) => [p.idea.htfBias ? BIAS_LABEL[p.idea.htfBias] : NOT_SET];
     case "regime":
-      return (p) => [p.idea.regime ? REGIME_LABEL[p.idea.regime] : "—"];
+      return (p) => [p.idea.regime ? REGIME_LABEL[p.idea.regime] : NOT_SET];
     case "session":
       return (p) => [sessionOf(p.idea.openedAt)];
     case "weekday":
@@ -160,13 +162,13 @@ export function dimensionKeys(dim: string): (p: StatPoint) => string[] {
     case "month":
       return (p) => [monthOf(p.date)];
     case "followedPlan":
-      return (p) => [p.idea.followedPlan == null ? "—" : p.idea.followedPlan ? "Yes" : "No"];
+      return (p) => [p.idea.followedPlan == null ? NOT_SET : p.idea.followedPlan ? "Yes" : "No"];
     case "exitReason":
-      return (p) => [p.idea.primary?.exitReason ? EXIT_LABEL[p.idea.primary.exitReason] : "—"];
+      return (p) => [p.idea.primary?.exitReason ? EXIT_LABEL[p.idea.primary.exitReason] : NOT_SET];
     case "plannedRR":
       return (p) => [rrBucket(p.idea.primary?.rr)];
     case "confidence":
-      return (p) => [p.idea.confidence ? `${p.idea.confidence}/5` : "—"];
+      return (p) => [p.idea.confidence ? `${p.idea.confidence}/5` : NOT_SET];
     case "checklist":
       return (p) => {
         const items = p.idea.setup?.checklist ?? [];
@@ -229,4 +231,15 @@ export function mistakeSummary(list: IdeaView[]) {
     }
   }
   return [...map.values()].sort((a, b) => b.cost - a.cost || b.count - a.count);
+}
+
+/**
+ * "2 of 3 taken trades had a mistake (incl. 1 open)": the denominator is every taken idea in range, so it says
+ * when open trades are part of it. Null when there are none.
+ */
+export function mistakeRateLabel(taken: Pick<IdeaView, "mistakes" | "primary" | "outcome">[]): string | null {
+  if (!taken.length) return null;
+  const withMistake = taken.filter((i) => i.mistakes.length).length;
+  const open = taken.filter(isOpen).length;
+  return `${withMistake} of ${taken.length} taken trade${taken.length === 1 ? "" : "s"} had a mistake${open ? ` (incl. ${open} open)` : ""}`;
 }

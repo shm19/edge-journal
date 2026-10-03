@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyScenario, newEditorIdea, type EditorIdea } from "@/lib/editor-shape";
 import { makeSetup } from "../../test/fixtures";
 import { chooseOption } from "../../test/select";
 
 const push = vi.fn();
+const replace = vi.fn();
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, refresh, replace: vi.fn(), back: vi.fn() }),
+  useRouter: () => ({ push, refresh, replace, back: vi.fn() }),
   usePathname: () => "/ideas/new",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -53,6 +54,7 @@ async function fillPrimary(user: ReturnType<typeof userEvent.setup>, exit = "") 
 
 beforeEach(() => {
   push.mockReset();
+  replace.mockReset();
   refresh.mockReset();
   saveIdea.mockReset();
   vi.restoreAllMocks();
@@ -173,7 +175,8 @@ describe("observation mode", () => {
     await user.click(screen.getByRole("button", { name: /Save/ }));
     expect(saveIdea).toHaveBeenCalledTimes(1);
     expect(saveIdea.mock.calls[0][0]).toMatchObject({ status: "forward_test", outcome: "hit", scenarios: [] });
-    expect(push).toHaveBeenCalledWith("/ideas/7");
+    expect(replace).toHaveBeenCalledWith("/ideas/7"); // replace: Back must not return to the form
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("is not a dead end: switching an observation to Taken brings back a primary scenario", async () => {
@@ -287,6 +290,217 @@ describe("invalid typed dates block saving", () => {
   });
 });
 
+describe("a typo in a price never saves silently", () => {
+  it.each([
+    ["Exit", "abc", "Primary · Exit: must be a number"],
+    ["Target (FTA)", "1.2.3", "Primary · Target: must be a number"],
+    ["Entry", "x1", "Primary · Entry: must be a number"],
+  ])("%s %s blocks the save, names the field and focuses it", async (label, text, message) => {
+    const user = renderEditor();
+    await fillPrimary(user);
+    const box = screen.getAllByLabelText(label)[0];
+    await user.clear(box);
+    await user.type(box, text);
+    expect(box).toHaveValue(text); // the typo stays visible instead of being filtered out
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    expect(saveIdea).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("alert").map((a) => a.textContent).join(" ")).toContain(message);
+    expect(box).toHaveFocus();
+    expect(box).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("price boxes have names that say which scenario they belong to", async () => {
+    const user = renderEditor();
+    await user.click(screen.getByRole("button", { name: "Add Hold to target" }));
+    for (const f of ["entry", "stop", "target", "exit"]) {
+      expect(screen.getByRole("textbox", { name: `Primary ${f} price` })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: `Alternative 1 ${f} price` })).toBeInTheDocument();
+    }
+  });
+});
+
+describe("Coin and failed-save focus", () => {
+  it("a blank Coin says 'Pick a coin' under the field, focuses it, and the message clears once the form changes", async () => {
+    const user = renderEditor(newEditorIdea({}));
+    await fillPrimary(user);
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    expect(saveIdea).not.toHaveBeenCalled();
+    const coin = screen.getByLabelText("Coin");
+    expect(coin).toHaveFocus();
+    expect(coin).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getAllByText("Pick a coin")).toHaveLength(2); // inline + save bar
+    await user.type(coin, "ETH");
+    expect(screen.getAllByText("Pick a coin")).toHaveLength(1); // only the stale save-bar summary is left
+  });
+
+  it("the placeholder does not look like a value", () => {
+    renderEditor(newEditorIdea({}));
+    expect(screen.getByLabelText("Coin")).toHaveAttribute("placeholder", "e.g. BTC");
+  });
+
+  it("a server error about a field focuses that field too", async () => {
+    saveIdea.mockResolvedValueOnce({ ok: false, error: "Primary · Stop: must be below entry for a long" });
+    const user = renderEditor();
+    await fillPrimary(user);
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(screen.getAllByLabelText(/^Stop/)[0]).toHaveFocus());
+    expect(screen.getByText("must be below entry for a long")).toBeInTheDocument();
+  });
+
+  it("an invalid date focuses its box", async () => {
+    const user = renderEditor();
+    await fillPrimary(user, "110");
+    const closed = screen.getByLabelText("Closed (UTC)");
+    await user.clear(closed);
+    await user.type(closed, "garbage");
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    expect(closed).toHaveFocus();
+  });
+});
+
+describe("Closed text that is not a date (no blur first)", () => {
+  it("garbage typed into an empty Closed blocks Cmd+Enter and Save even though the box was never blurred", async () => {
+    saveIdea.mockResolvedValue({ ok: true, data: { id: 9 } });
+    const user = renderEditor();
+    await fillPrimary(user); // still open: Closed is empty
+    const closed = screen.getByLabelText("Closed (UTC)");
+    await user.type(closed, "garbage"); // focus stays in the box
+    act(() => {
+      fireEvent.keyDown(window, { key: "Enter", metaKey: true });
+    });
+    expect(saveIdea).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("alert").map((a) => a.textContent).join(" ")).toMatch(/Fix the Closed date first/);
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    expect(saveIdea).not.toHaveBeenCalled();
+  });
+});
+
+describe("Hit / Miss next to prices (forward test)", () => {
+  const forward = () => newEditorIdea({ symbol: "BTC", status: "forward_test" });
+
+  it("hides the result row until entry and stop are filled, and explains the Hit / Miss tab", async () => {
+    const user = renderEditor(forward());
+    expect(screen.queryByText("Did it play out?")).not.toBeInTheDocument();
+    expect(screen.getByText(/switch to/)).toHaveTextContent("Hit / Miss");
+    await user.type(screen.getAllByLabelText("Entry")[0], "100");
+    await user.type(screen.getAllByLabelText(/^Stop/)[0], "90");
+    expect(screen.getByText("Did it play out?")).toBeInTheDocument();
+  });
+
+  it("saving with no prices points at the Hit / Miss tab", async () => {
+    const user = renderEditor(forward());
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    expect(saveIdea).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Add entry and stop, or switch to Hit / Miss (no prices)");
+  });
+});
+
+describe("screenshot upload errors", () => {
+  const drop = (name: string, type: string) => {
+    const input = screen.getByLabelText("Add screenshots") as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(["x"], name, { type })] } });
+  };
+  const respond = (status: number, body: unknown) => vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body), { status })));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows the server's 415 text next to the dropzone (role=alert), and a later good upload clears it", async () => {
+    respond(415, { error: "Only PNG, JPG, WEBP or GIF images" });
+    renderEditor();
+    drop("fake.png", "image/png");
+    expect(await screen.findByText("Only PNG, JPG, WEBP or GIF images")).toBeInTheDocument();
+    const alert = screen.getAllByRole("alert").find((a) => a.textContent?.includes("Only PNG"))!;
+    expect(screen.getByText("Screenshots").closest(".rounded-xl")).toContainElement(alert);
+    respond(200, { fileName: "ok.png" });
+    drop("ok.png", "image/png");
+    await waitFor(() => expect(screen.queryByText("Only PNG, JPG, WEBP or GIF images")).not.toBeInTheDocument());
+  });
+
+  it("shows the 413 text, and falls back to the status when the body is not JSON", async () => {
+    respond(413, { error: "Image is larger than 10 MB" });
+    renderEditor();
+    drop("big.png", "image/png");
+    expect(await screen.findByText("Image is larger than 10 MB")).toBeInTheDocument();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>", { status: 502 })));
+    drop("a.png", "image/png");
+    expect(await screen.findByText("Upload failed (502)")).toBeInTheDocument();
+  });
+
+  it("a file that is not an image is refused before upload, with a message in the card", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    renderEditor();
+    drop("notes.txt", "text/plain");
+    expect(screen.getByText("Only images can be attached (PNG, JPG, WEBP, GIF)")).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("unsaved edits and in-app links", () => {
+  const withLink = () => {
+    const a = document.createElement("a");
+    a.href = "/ideas";
+    a.textContent = "Journal link";
+    document.body.appendChild(a);
+    return a;
+  };
+  afterEach(() => document.querySelectorAll("a[data-test-link]").forEach((n) => n.remove()));
+
+  it("asks before an in-app link discards a dirty editor, and blocks the click when declined", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const user = renderEditor();
+    await user.type(screen.getAllByLabelText("Entry")[0], "1");
+    const link = withLink();
+    link.dataset.testLink = "1";
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    link.dispatchEvent(click);
+    expect(confirm).toHaveBeenCalledWith("Discard your unsaved changes?");
+    expect(click.defaultPrevented).toBe(true);
+  });
+
+  it("lets the click through when the user confirms", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const user = renderEditor();
+    await user.type(screen.getAllByLabelText("Entry")[0], "1");
+    const link = withLink();
+    link.dataset.testLink = "1";
+    link.addEventListener("click", (e) => e.preventDefault()); // jsdom can't navigate
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    link.dispatchEvent(click);
+    expect(window.confirm).toHaveBeenCalled();
+  });
+
+  it("never asks when nothing changed, for modified clicks, external links or the current page", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const link = withLink();
+    link.dataset.testLink = "1";
+    link.addEventListener("click", (e) => e.preventDefault());
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    expect(confirm).not.toHaveBeenCalled(); // clean editor
+    const user = renderEditor();
+    await user.type(screen.getAllByLabelText("Entry")[0], "1");
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, metaKey: true }));
+    link.href = "https://example.com/x";
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    link.href = window.location.href;
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("does not block after a successful save (the redirect is not a discard)", async () => {
+    saveIdea.mockResolvedValue({ ok: true, data: { id: 3 } });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const user = renderEditor();
+    await fillPrimary(user, "110");
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    const link = withLink();
+    link.dataset.testLink = "1";
+    link.addEventListener("click", (e) => e.preventDefault());
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    expect(confirm).not.toHaveBeenCalled();
+  });
+});
+
 describe("saving", () => {
   it("only submits once even if triggered twice before the first save returns", async () => {
     let resolve!: (v: unknown) => void;
@@ -300,7 +514,8 @@ describe("saving", () => {
     expect(saveIdea).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: /Save/ })).toBeDisabled();
     await act(async () => resolve({ ok: true, data: { id: 3 } }));
-    expect(push).toHaveBeenCalledWith("/ideas/3");
+    expect(replace).toHaveBeenCalledWith("/ideas/3"); // replace: Back must not return to the form
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("allows a retry after the server rejects the save, and shows its message", async () => {
@@ -312,7 +527,8 @@ describe("saving", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /Save/ })).toBeEnabled()); // the transition may still be pending
     await user.click(screen.getByRole("button", { name: /Save/ }));
     expect(saveIdea).toHaveBeenCalledTimes(2);
-    expect(push).toHaveBeenCalledWith("/ideas/3");
+    expect(replace).toHaveBeenCalledWith("/ideas/3"); // replace: Back must not return to the form
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("sends the scenarios parsed, with the close time defaulted to the open time", async () => {

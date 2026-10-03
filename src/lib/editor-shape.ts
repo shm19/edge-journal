@@ -246,10 +246,47 @@ export function editorMistakeCost(p: EditorIdea, m: EditorMistake): number | nul
   return mistakeCost(p.direction, prices(alt), primary && prices(primary));
 }
 
-/** Parse the form into the `saveIdea` payload, or say what is wrong. */
-export function buildSavePayload(idea: EditorIdea): { ok: true; payload: Record<string, unknown> } | { ok: false; error: string } {
+/** DOM id of one price box of a scenario (`field` is entry, stop, target or exit): what a failed save focuses. */
+export const priceFieldId = (scenarioKey: string, field: PriceField) => `price-${scenarioKey}-${field}`;
+export const SYMBOL_FIELD_ID = "idea-symbol";
+export type PriceField = "entry" | "stop" | "target" | "exit";
+
+/** The primary has entry and stop typed: only then is a Hit / Miss result next to prices meaningful. */
+export const pricesReady = (p: Pick<EditorIdea, "scenarios">) => {
+  const primary = p.scenarios.find((s) => s.isPrimary);
+  return !!primary && primary.entry.trim() !== "" && primary.stop.trim() !== "";
+};
+
+export type SaveResult = { ok: true; payload: Record<string, unknown> } | { ok: false; error: string; /** DOM id of the first invalid field, if there is one. */ field?: string };
+
+const FIELD_LABEL: Record<PriceField, string> = { entry: "Entry", stop: "Stop", target: "Target", exit: "Exit" };
+const LABEL_FIELD = Object.fromEntries(Object.entries(FIELD_LABEL).map(([k, v]) => [v, k])) as Record<string, PriceField>;
+
+/**
+ * Which field a save error is about, from its text ("Primary · Exit: …", "Alternative #2 · Stop: …", "Pick a coin",
+ * "Closed: …"), so the editor can focus it. Undefined when the error is not about one field.
+ */
+export function errorField(error: string, scenarios: Pick<EditorScenario, "key" | "isPrimary">[]): string | undefined {
+  if (/^(Pick a coin|Coin\b)/.test(error)) return SYMBOL_FIELD_ID;
+  if (/^Opened\b/.test(error)) return "idea-opened";
+  if (/^Closed\b/.test(error)) return "idea-closed";
+  const m = /^(?:Primary|Alternative #(\d+)) · (Entry|Stop|Target|Exit):/.exec(error);
+  if (!m) return undefined;
+  const s = m[1] ? scenarios.filter((x) => !x.isPrimary)[Number(m[1]) - 1] : scenarios.find((x) => x.isPrimary);
+  return s ? priceFieldId(s.key, LABEL_FIELD[m[2]]) : undefined;
+}
+
+/** The part of a save error that fits under the field itself ("must be a number" for "Primary · Exit: must be a number"). */
+export function inlineMessage(error: string): string {
+  const i = error.indexOf(": ");
+  return i > 0 && /^(Primary|Alternative #\d+) · |^(Opened|Closed|Coin)\b/.test(error) ? error.slice(i + 2) : error;
+}
+
+/** Parse the form into the `saveIdea` payload, or say what is wrong (and which field to focus). */
+export function buildSavePayload(idea: EditorIdea): SaveResult {
   const isForward = idea.status === "forward_test";
   const scenarios = idea.scenarios;
+  if (!idea.symbol.trim()) return { ok: false, error: "Pick a coin", field: SYMBOL_FIELD_ID };
   const parsed = scenarios.map((s) => ({
     id: s.id,
     scenarioTypeId: s.isPrimary ? null : s.scenarioTypeId,
@@ -261,18 +298,26 @@ export function buildSavePayload(idea: EditorIdea): { ok: true; payload: Record<
     exitReason: (s.exitReason || (parsePrice(s.exitPrice) == null ? null : "manual")) as string | null,
     notes: s.notes,
   }));
-  const bad = parsed.findIndex((s, i) => {
-    const raw = scenarios[i];
-    return (
-      s.entry == null ||
-      s.stop == null ||
-      (raw.target.trim() !== "" && s.target == null) ||
-      (raw.exitPrice.trim() !== "" && s.exitPrice == null && s.exitReason !== "not_filled")
-    );
-  });
-  if (bad >= 0) {
-    const who = scenarios[bad].isPrimary ? "Primary" : `Alternative #${scenarios.slice(0, bad).filter((x) => !x.isPrimary).length + 1}`;
-    return { ok: false, error: `${who}: entry and stop are required, and every price must be a valid number` };
+  // Every price box that holds text must parse: a typo must never silently become "empty" (an exit typo would reopen a closed trade).
+  for (const [i, s] of scenarios.entries()) {
+    const who = s.isPrimary ? "Primary" : `Alternative #${scenarios.slice(0, i).filter((x) => !x.isPrimary).length + 1}`;
+    const boxes: [PriceField, string, number | null, boolean][] = [
+      ["entry", s.entry, parsed[i].entry, true],
+      ["stop", s.stop, parsed[i].stop, true],
+      ["target", s.target, parsed[i].target, false],
+      ["exit", s.exitPrice, parsed[i].exitPrice, false],
+    ];
+    for (const [field, raw, value, required] of boxes) {
+      const id = priceFieldId(s.key, field);
+      if (raw.trim() === "") {
+        if (!required) continue;
+        // A forward test left on the Prices tab: point at the price-less path instead of just complaining.
+        if (isForward) return { ok: false, error: "Add entry and stop, or switch to Hit / Miss (no prices)", field: id };
+        return { ok: false, error: `${who} · ${FIELD_LABEL[field]}: required`, field: id };
+      }
+      if (field === "exit" && s.exitReason === "not_filled") continue; // the exit box is disabled and ignored
+      if (value == null) return { ok: false, error: `${who} · ${FIELD_LABEL[field]}: must be a number`, field: id };
+    }
   }
   if (isObservationOnly(idea) && !idea.outcome) return { ok: false, error: "Mark the observation as Hit or Miss" };
   if (idea.mistakes.some((m) => parseCost(m.costR).invalid)) return { ok: false, error: "A mistake's cost must be a number (or leave it empty)" };

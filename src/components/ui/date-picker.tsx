@@ -174,6 +174,7 @@ export function DateTimeField({
   hint,
   copyFrom,
   onInvalidChange,
+  error,
 }: {
   id: string;
   label: string;
@@ -186,6 +187,8 @@ export function DateTimeField({
   /** Another field's value: adds a button with this label that copies it, and seeds the calendar month and time. */
   copyFrom?: { label: string; value: string };
   onInvalidChange?: (invalid: boolean) => void;
+  /** A message from outside (a failed save), shown under the box like the format error. */
+  error?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const [blurred, setBlurred] = React.useState(false);
@@ -242,8 +245,8 @@ export function DateTimeField({
               placeholder="YYYY-MM-DD HH:mm"
               autoComplete="off"
               spellCheck={false}
-              aria-invalid={showTextError}
-              aria-describedby={[showTextError && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined}
+              aria-invalid={showTextError || !!error}
+              aria-describedby={[(showTextError || error) && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined}
               className="min-w-0 px-2 tabular"
             />
             <Popover.Trigger
@@ -315,9 +318,9 @@ export function DateTimeField({
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
-      {showTextError && (
+      {(showTextError || error) && (
         <p id={`${id}-error`} role="alert" className="text-[11px] text-loss">
-          {DATETIME_FORMAT}
+          {showTextError ? DATETIME_FORMAT : error}
         </p>
       )}
       {hint && (

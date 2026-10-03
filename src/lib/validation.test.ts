@@ -109,7 +109,7 @@ describe("firstError", () => {
     expect(fail(idea({ scenarios: [scen({ stop: 120 })] }))).toMatch(/^Primary · Stop:/);
   });
   it("labels plain fields and rewrites type errors", () => {
-    expect(fail(idea({ symbol: "" }))).toBe("Coin: Coin is required");
+    expect(fail(idea({ symbol: "" }))).toBe("Pick a coin");
     expect(fail(idea({ riskPct: "x" }))).toMatch(/^riskPct: /);
     expect(fail(idea({ scenarios: [scen({ entry: "x" })] }))).toBe("Primary · Entry: must be a number");
   });

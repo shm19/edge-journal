@@ -7,6 +7,10 @@ services:
     environment:
       DATA_DIR: /data
       TZ: ${TZ:-UTC}
+    # Don't add `user:` or `cap_drop: [ALL]`: the entrypoint starts as root to chown ./data, then drops to
+    # the `node` user (uid 1000). With an explicit `user:`, run `chown 1000:1000 data` yourself (see README).
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./data:/data
     # Bind to localhost only; put Caddy / nginx in front for HTTPS (see README).

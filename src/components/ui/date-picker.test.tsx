@@ -439,6 +439,20 @@ describe("DateRangePicker anchor, presets and calendar sync", () => {
   });
 });
 
+describe("DateTimeField error from outside", () => {
+  it("shows the message of a failed save under the box, marks it invalid and links it", () => {
+    const { input } = setupField({ error: "Close time is before open time" });
+    expect(screen.getByRole("alert")).toHaveTextContent("Close time is before open time");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input.getAttribute("aria-describedby")).toBe("f-error");
+  });
+  it("shows nothing for a valid box without an error", () => {
+    const { input } = setupField();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(input).toHaveAttribute("aria-invalid", "false");
+  });
+});
+
 describe("DateTimeField typing, shortcuts and a11y", () => {
   it("shows the format error only on blur or at full length", async () => {
     const { user, input } = setupField({ value: "" });

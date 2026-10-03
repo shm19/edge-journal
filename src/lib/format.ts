@@ -56,6 +56,9 @@ export function fmtPrice(v: number | null | undefined): string {
   return Number(v.toFixed(digits)).toLocaleString("en-US", { maximumFractionDigits: digits });
 }
 
+/** en-GB spells September "Sept" but every other month with three letters: keep them all at three. */
+const noSept = (s: string) => s.replace("Sept", "Sep");
+
 /** Date + time, always in UTC, with a "UTC" marker. */
 export function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -67,12 +70,12 @@ export function fmtDateTime(iso: string | null | undefined): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
-  return `${s} UTC`;
+  return `${noSept(s)} UTC`;
 }
 
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return cachedFormatter("en-GB", { timeZone: APP_TIMEZONE, day: "2-digit", month: "short", year: "2-digit" }).format(new Date(iso));
+  return noSept(cachedFormatter("en-GB", { timeZone: APP_TIMEZONE, day: "2-digit", month: "short", year: "2-digit" }).format(new Date(iso)));
 }
 
 export function rTone(r: number | null | undefined, be = 0.1): "win" | "loss" | "be" | "none" {

@@ -16,6 +16,7 @@ export function ContextCard({
   setups,
   symbols,
   onInvalidDate,
+  fieldError,
 }: {
   idea: EditorIdea;
   setIdea: Dispatch<SetStateAction<EditorIdea>>;
@@ -24,7 +25,10 @@ export function ContextCard({
   symbols: string[];
   /** A date box holds text that is not a valid date-time (so saving would silently drop it). */
   onInvalidDate: (label: string, invalid: boolean) => void;
+  /** The field a failed save points at (its DOM id) and the message to show under it. */
+  fieldError?: { id: string; message: string } | null;
 }) {
+  const err = (id: string) => (fieldError?.id === id ? fieldError.message : undefined);
   const changeSetup = (id: number | null) => {
     const ticked = Object.values(idea.checklistState).filter(Boolean).length;
     if (ticked && !confirm(`Changing the setup clears the ${ticked} ticked checklist item${ticked === 1 ? "" : "s"}. Continue?`)) return;
@@ -45,13 +49,14 @@ export function ContextCard({
           />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Coin" htmlFor="idea-symbol">
+          <Field label="Coin" htmlFor="idea-symbol" error={err("idea-symbol")}>
             <Input
               id="idea-symbol"
               list="symbols"
               value={idea.symbol}
               onChange={(e) => set("symbol", e.target.value.toUpperCase())}
-              placeholder="BTC"
+              placeholder="e.g. BTC"
+              aria-invalid={err("idea-symbol") ? true : undefined}
               autoFocus={!idea.id && !idea.symbol}
             />
             <datalist id="symbols">
@@ -114,6 +119,7 @@ export function ContextCard({
             id="idea-opened"
             label="Opened (UTC)"
             required
+            error={err("idea-opened")}
             onInvalidChange={(bad) => onInvalidDate("Opened", bad)}
             value={isoToZonedInput(idea.openedAt)}
             onChange={(v) => {
@@ -127,6 +133,7 @@ export function ContextCard({
             value={isoToZonedInput(idea.closedAt)}
             onChange={(v) => setIdea((p) => setClosedAt(p, v ? zonedInputToIso(v) : null))}
             clearable={!!idea.closedAt}
+            error={err("idea-closed")}
             onInvalidChange={(bad) => onInvalidDate("Closed", bad)}
             copyFrom={{ label: "Same as opened", value: isoToZonedInput(idea.openedAt) }}
             hint={idea.closedAtAuto ? "Set to the open time — adjust if the trade closed later." : undefined}

@@ -209,7 +209,7 @@ export function groupSummaries<T extends RPoint>(
   const groups = new Map<string, T[]>();
   for (const p of points) {
     const keys = [...new Set(keysOf(p))];
-    for (const k of keys.length ? keys : ["—"]) {
+    for (const k of keys.length ? keys : ["Not set"]) {
       const list = groups.get(k);
       if (list) list.push(p);
       else groups.set(k, [p]);

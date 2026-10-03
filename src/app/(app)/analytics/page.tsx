@@ -12,6 +12,7 @@ import { BarMetricChart, MultiEquityChart } from "@/components/charts";
 import { ComparisonTable } from "@/components/comparison-table";
 import { FilterBar } from "@/components/filter-bar";
 import { Card, CardHeader, EmptyState, LinkButton, PageHeader } from "@/components/ui";
+import { cn } from "@/lib/cn";
 import { fmtDate, fmtDrawdown, fmtPct, fmtProfitFactor, fmtR } from "@/lib/format";
 import {
   applyFilters,
@@ -137,7 +138,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                         <td className="px-3 py-2.5 text-right">{g.summary.count}</td>
                         <td className="px-3 py-2.5 text-right">{fmtPct(g.summary.winRate)}</td>
                         <td className="px-3 py-2.5 text-right text-win">{fmtR(g.summary.avgWin)}</td>
-                        <td className="px-3 py-2.5 text-right text-loss">{fmtR(g.summary.avgLoss)}</td>
+                        <td className={cn("px-3 py-2.5 text-right", g.summary.avgLoss ? "text-loss" : "text-be")}>{fmtR(g.summary.avgLoss)}</td>
                         <td className="px-3 py-2.5 text-right">
                           <RValue r={g.summary.expectancy} be={0} />
                         </td>
@@ -145,7 +146,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                           <RValue r={g.summary.totalR} be={0} />
                         </td>
                         <td className="px-3 py-2.5 text-right">{fmtProfitFactor(g.summary)}</td>
-                        <td className="px-3 py-2.5 text-right text-loss">{fmtDrawdown(g.summary)}</td>
+                        <td className={cn("px-3 py-2.5 text-right", g.summary.maxDrawdown ? "text-loss" : "text-be")}>{fmtDrawdown(g.summary)}</td>
                         <td className="px-3 py-2.5 text-right text-muted">{fmtPct(g.summary.followedPlanPct)}</td>
                       </tr>
                     ))}
@@ -252,11 +253,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                   <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
                     <div>
                       <dt className="text-[11px] text-faint">Left on the table</dt>
-                      <dd className="font-semibold tabular text-win">{a.count ? fmtR(a.leftOnTable) : "—"}</dd>
+                      <dd className={cn("font-semibold tabular", a.leftOnTable ? "text-win" : "text-be")}>{a.count ? fmtR(a.leftOnTable) : "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[11px] text-faint">Losses avoided</dt>
-                      <dd className="font-semibold tabular text-loss">{a.count ? `${a.lossesAvoided.toFixed(2)}R` : "—"}</dd>
+                      <dd className={cn("font-semibold tabular", a.lossesAvoided ? "text-loss" : "text-be")}>{a.count ? `${a.lossesAvoided.toFixed(2)}R` : "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[11px] text-faint">Net if taken</dt>

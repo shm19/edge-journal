@@ -5,10 +5,15 @@ import {
   buildSavePayload,
   editorMistakeCost,
   emptyScenario,
+  errorField,
+  inlineMessage,
   isObservationOnly,
   newEditorIdea,
   parseCost,
   patchScenario,
+  priceFieldId,
+  pricesReady,
+  SYMBOL_FIELD_ID,
   removeScenario,
   setClosedAt,
   setOpenedAt,
@@ -222,9 +227,9 @@ describe("price error labels", () => {
     const alt1 = { ...emptyScenario(false), entry: "100", stop: "90" };
     const alt2 = { ...emptyScenario(false), entry: "100", stop: "" };
     const i = idea({ scenarios: [alt1, idea().scenarios[0], alt2] });
-    expect(buildSavePayload(i)).toEqual({ ok: false, error: "Alternative #2: entry and stop are required, and every price must be a valid number" });
+    expect(buildSavePayload(i)).toEqual({ ok: false, error: "Alternative #2 · Stop: required", field: priceFieldId(alt2.key, "stop") });
     const p = idea({ scenarios: [{ ...idea().scenarios[0], stop: "" }] });
-    expect(buildSavePayload(p)).toMatchObject({ error: expect.stringMatching(/^Primary: /) });
+    expect(buildSavePayload(p)).toMatchObject({ error: "Primary · Stop: required" });
   });
 });
 
@@ -344,12 +349,84 @@ describe("buildSavePayload details", () => {
   it("rejects unparsable target or exit text and names the alternative", () => {
     const base = idea();
     const bad = (patch: object) => buildSavePayload(idea({ scenarios: [{ ...base.scenarios[0], ...patch }] }));
-    expect(bad({ target: "abc" })).toMatchObject({ ok: false, error: expect.stringMatching(/^Primary:/) });
-    expect(bad({ exitPrice: "abc" })).toMatchObject({ ok: false });
+    expect(bad({ target: "abc" })).toMatchObject({ ok: false, error: "Primary · Target: must be a number" });
+    expect(bad({ exitPrice: "abc" })).toMatchObject({ ok: false, error: "Primary · Exit: must be a number" });
     // text in the exit price is tolerated when the trade was never filled (the price is dropped)
     expect(bad({ exitPrice: "abc", exitReason: "not_filled" }).ok).toBe(true);
     const withAlt = idea({ scenarios: [base.scenarios[0], { ...emptyScenario(false), entry: "1" }] });
-    expect(buildSavePayload(withAlt)).toMatchObject({ ok: false, error: expect.stringMatching(/^Alternative #1:/) });
+    expect(buildSavePayload(withAlt)).toMatchObject({ ok: false, error: "Alternative #1 · Stop: required" });
+  });
+});
+
+describe("every non-empty price box must parse (no silent drop)", () => {
+  const base = idea();
+  const key = base.scenarios[0].key;
+  const bad = (patch: object, over: Partial<EditorIdea> = {}) => buildSavePayload(idea({ ...over, scenarios: [{ ...base.scenarios[0], ...patch }] }));
+  it.each([
+    ["entry", { entry: "abc" }, "Primary · Entry: must be a number"],
+    ["stop", { stop: "1.2.3" }, "Primary · Stop: must be a number"],
+    ["target", { target: "x" }, "Primary · Target: must be a number"],
+    ["exit", { exitPrice: "abc" }, "Primary · Exit: must be a number"],
+  ] as const)("blocks an unparseable %s and names the field to focus", (field, patch, error) => {
+    expect(bad(patch)).toEqual({ ok: false, error, field: priceFieldId(key, field) });
+  });
+  it("labels alternatives by their number", () => {
+    const alt = { ...emptyScenario(false), entry: "100", stop: "90", target: "x" };
+    expect(buildSavePayload(idea({ scenarios: [base.scenarios[0], alt] }))).toEqual({
+      ok: false,
+      error: "Alternative #1 · Target: must be a number",
+      field: priceFieldId(alt.key, "target"),
+    });
+  });
+  it("an empty required box says it is required", () => {
+    expect(bad({ entry: "  " })).toMatchObject({ error: "Primary · Entry: required", field: priceFieldId(key, "entry") });
+  });
+  it("an exit typed before choosing Not filled is ignored, as before", () => {
+    expect(bad({ exitPrice: "abc", exitReason: "not_filled" }).ok).toBe(true);
+  });
+  it("a blank coin is 'Pick a coin' and points at the Coin field", () => {
+    expect(buildSavePayload(idea({ symbol: "  " }))).toEqual({ ok: false, error: "Pick a coin", field: SYMBOL_FIELD_ID });
+  });
+});
+
+describe("forward test left on the Prices tab", () => {
+  it("empty entry or stop says how to get a price-less result", () => {
+    const base = idea({ status: "forward_test", outcome: "hit" });
+    const r = buildSavePayload({ ...base, scenarios: [{ ...base.scenarios[0], entry: "", stop: "" }] });
+    expect(r).toEqual({ ok: false, error: "Add entry and stop, or switch to Hit / Miss (no prices)", field: priceFieldId(base.scenarios[0].key, "entry") });
+  });
+  it("pricesReady needs the primary's entry and stop", () => {
+    const base = idea({ status: "forward_test" });
+    expect(pricesReady(base)).toBe(true);
+    expect(pricesReady({ scenarios: [{ ...base.scenarios[0], stop: " " }] })).toBe(false);
+    expect(pricesReady({ scenarios: [] })).toBe(false);
+  });
+});
+
+describe("errorField / inlineMessage", () => {
+  const scenarios = [
+    { key: "p", isPrimary: true },
+    { key: "a1", isPrimary: false },
+    { key: "a2", isPrimary: false },
+  ];
+  it("maps a save error to the DOM id of its field", () => {
+    expect(errorField("Pick a coin", scenarios)).toBe(SYMBOL_FIELD_ID);
+    expect(errorField("Coin: too long", scenarios)).toBe(SYMBOL_FIELD_ID);
+    expect(errorField("Opened: Invalid date", scenarios)).toBe("idea-opened");
+    expect(errorField("Closed: Close time is before open time", scenarios)).toBe("idea-closed");
+    expect(errorField("Primary · Exit: must be a number", scenarios)).toBe(priceFieldId("p", "exit"));
+    expect(errorField("Alternative #2 · Stop: must be below entry for a long", scenarios)).toBe(priceFieldId("a2", "stop"));
+  });
+  it("is undefined for errors that are not about one field", () => {
+    expect(errorField("Mark the observation as Hit or Miss", scenarios)).toBeUndefined();
+    expect(errorField("Alternative #9 · Stop: nope", scenarios)).toBeUndefined();
+    expect(errorField("Primary · Exit reason: pick one", scenarios)).toBeUndefined();
+  });
+  it("keeps only the part that fits under the field", () => {
+    expect(inlineMessage("Primary · Exit: must be a number")).toBe("must be a number");
+    expect(inlineMessage("Closed: Close time is before open time")).toBe("Close time is before open time");
+    expect(inlineMessage("Pick a coin")).toBe("Pick a coin");
+    expect(inlineMessage("Skip reason: x: y")).toBe("Skip reason: x: y");
   });
 });
 

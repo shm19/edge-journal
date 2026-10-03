@@ -15,9 +15,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ name: string }
     return new Response(new Uint8Array(data), {
       headers: {
         "content-type": MIME[ext],
+        // Names are random and never reused, so immutable is safe; "private" keeps shared caches out.
         "cache-control": "private, max-age=31536000, immutable",
         "x-content-type-options": "nosniff",
-        "content-security-policy": "default-src 'none'",
+        "content-security-policy": "default-src 'none'; sandbox",
+        "content-disposition": "inline",
       },
     });
   } catch {

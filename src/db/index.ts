@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { migrateSafely } from "./migrate";
 import * as schema from "./schema";
 import { seedIfEmpty } from "./seed";
 
@@ -20,8 +20,14 @@ function open() {
   sqlite.pragma("busy_timeout = 5000");
   sqlite.pragma("foreign_keys = ON");
   const db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder: path.join(/*turbopackIgnore: true*/ process.cwd(), "drizzle") });
-  seedIfEmpty(db);
+  try {
+    migrateSafely(sqlite, { migrationsFolder: path.join(/*turbopackIgnore: true*/ process.cwd(), "drizzle"), dataDir: DATA_DIR });
+    seedIfEmpty(db);
+  } catch (e) {
+    console.error(`FATAL: database startup failed: ${(e as Error).message}`);
+    sqlite.close(); // not cached, so the next request retries
+    throw e;
+  }
   return { db, sqlite };
 }
 

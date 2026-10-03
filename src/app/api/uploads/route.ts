@@ -8,17 +8,35 @@ import { sniff } from "@/lib/image-sniff";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
+const MAX_BODY = MAX_BYTES + 64 * 1024; // image + multipart framing
+
+class TooLarge extends Error {}
+
+/** Same request, but its body errors out as soon as more than `limit` bytes have streamed in (chunked uploads have no Content-Length). */
+function capBody(request: Request, limit: number): Request {
+  let seen = 0;
+  const counter = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, ctrl) {
+      seen += chunk.byteLength;
+      if (seen > limit) ctrl.error(new TooLarge());
+      else ctrl.enqueue(chunk);
+    },
+  });
+  return new Request(request.url, { method: request.method, headers: request.headers, body: request.body?.pipeThrough(counter), duplex: "half" } as RequestInit);
+}
+
 const err = (error: string, status: number) => NextResponse.json({ error }, { status });
 
 export async function POST(request: Request) {
   if (!(await isAuthenticated())) return err("unauthorized", 401);
   const len = Number(request.headers.get("content-length") ?? 0);
-  if (len > MAX_BYTES + 64 * 1024) return err("Image is larger than 10 MB", 413);
+  if (len > MAX_BODY) return err("Image is larger than 10 MB", 413);
 
   let form: FormData;
   try {
-    form = await request.formData();
-  } catch {
+    form = await capBody(request, MAX_BODY).formData();
+  } catch (e) {
+    if (e instanceof TooLarge) return err("Image is larger than 10 MB", 413);
     return err("Couldn't read the upload", 400);
   }
   const file = form.get("file");

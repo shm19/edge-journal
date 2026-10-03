@@ -48,7 +48,7 @@ export const ideaSchema = z
     symbol: z
       .string()
       .trim()
-      .min(1, "Coin is required")
+      .min(1, "Pick a coin")
       .max(24)
       .transform((s) => s.toUpperCase()),
     direction: z.enum(DIRECTIONS),
@@ -195,6 +195,6 @@ export function firstError(err: z.ZodError, input?: unknown): string {
     where = FIELD_LABELS[String(path[path.length - 1])] ?? String(path[path.length - 1]);
   }
   const msg = /expected number/.test(issue.message) ? "must be a number" : issue.message;
-  const labelled = path[0] === "scenarios" ? path.length > 2 : !["outcome", "skipReason"].includes(String(path[0]));
+  const labelled = path[0] === "scenarios" ? path.length > 2 : !["outcome", "skipReason", "symbol"].includes(String(path[0]));
   return where && labelled ? `${where}: ${msg}` : msg;
 }

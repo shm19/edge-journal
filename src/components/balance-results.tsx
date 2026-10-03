@@ -77,11 +77,11 @@ export function BalanceResults({
             />
             <Kpi
               label="Max drawdown"
-              value={<span className={sim.maxDrawdown > 0 ? "text-loss" : "text-faint"}>{sim.maxDrawdown > 0 ? `-${fmtMoney(sim.maxDrawdown)}` : fmtMoney(0)}</span>}
+              value={<span className={sim.maxDrawdown > 0 ? "text-loss" : "text-be"}>{sim.maxDrawdown > 0 ? `-${fmtMoney(sim.maxDrawdown)}` : fmtMoney(0)}</span>}
               sub={`${sim.maxDrawdownPct.toFixed(2)}% from peak`}
             />
-            <Kpi label="Largest win" value={<span className="text-win">{fmtMoney(sim.largestWin, true)}</span>} />
-            <Kpi label="Largest loss" value={<span className="text-loss">{fmtMoney(sim.largestLoss, true)}</span>} />
+            <Kpi label="Largest win" value={<span className={(sim.largestWin ?? 0) > 0 ? "text-win" : "text-be"}>{fmtMoney(sim.largestWin, true)}</span>} />
+            <Kpi label="Largest loss" value={<span className={(sim.largestLoss ?? 0) < 0 ? "text-loss" : "text-be"}>{fmtMoney(sim.largestLoss, true)}</span>} />
           </div>
           <Card>
             <CardHeader title="Balance curve ($)" description="Hypothetical balance after each closed trade, in order." />

@@ -51,7 +51,7 @@ export function Sidebar({ logout }: { logout: () => Promise<void> }) {
       </Link>
       <Link
         href="/ideas/new"
-        className="mb-4 flex h-9 items-center justify-between rounded-lg bg-accent-strong px-3 text-sm font-medium text-white hover:bg-indigo-500"
+        className="mb-4 flex h-9 items-center justify-between rounded-lg bg-accent-strong px-3 text-sm font-medium text-white hover:bg-accent-hover"
       >
         <span className="flex items-center gap-2">
           <Plus className="h-4 w-4" /> New idea

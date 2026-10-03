@@ -21,14 +21,14 @@ export function BalanceCard({ points, defaultRiskPct }: { points: SimPoint[]; de
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <dt className="text-muted">Balance sim</dt>
+        <dt className="whitespace-nowrap text-muted">Balance sim</dt>
         <dd className="tabular">
           {sim.trades.length === 0 ? (
             <span className="text-faint">No closed taken trades yet</span>
           ) : (
             <>
               {fmtMoney(sim.start)} → {fmtMoney(sim.end)}{" "}
-              <span className={sim.pnl >= 0 ? "text-win" : "text-loss"}>({fmtPctPoints(sim.returnPct)})</span>
+              <span className={sim.pnl > 0 ? "text-win" : sim.pnl < 0 ? "text-loss" : "text-be"}>({fmtPctPoints(sim.returnPct)})</span>
             </>
           )}
           {" "}

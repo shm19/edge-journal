@@ -18,7 +18,7 @@ export default defineConfig({
     testTimeout: 30_000,
     coverage: {
       provider: "v8",
-      include: ["src/lib/**", "src/db/seed.ts", "src/app/api/**", "src/proxy.ts"],
+      include: ["src/lib/**", "src/db/seed.ts", "src/db/migrate.ts", "src/app/api/**", "src/proxy.ts"],
       exclude: ["src/**/*.test.*"],
       thresholds: {
         lines: 80,
@@ -28,8 +28,8 @@ export default defineConfig({
         // Pure logic: everything covered.
         "src/lib/{stats,price,tz,format,validation,editor-shape,metrics,analytics,status,date-input,balance}.ts": pure,
         // Server logic.
-        "src/lib/{queries,actions,settings,auth,session,login-guard,csv,image-sniff}.ts": server,
-        "src/db/seed.ts": server,
+        "src/lib/{queries,actions,settings,auth,session,login-guard,csv,image-sniff,preflight}.ts": server,
+        "src/db/{seed,migrate}.ts": server,
         "src/app/api/**": server,
         "src/proxy.ts": server,
       },

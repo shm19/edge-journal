@@ -2,17 +2,20 @@ import { useCallback, useEffect, useState } from "react";
 
 /**
  * Screenshot upload state for the editor: file picker / paste / drag & drop → POST /api/uploads → `onAdd(fileName)`.
- * `onAdd` and `onError` must be stable (state setters or useCallback).
+ * `onAdd` must be stable (a state setter or useCallback). A rejected file (415 wrong type, 413 too large, ...) sets
+ * `uploadError` to the server's own text, which the Screenshots card shows next to the dropzone; the next upload clears it.
  */
-export function useScreenshotUpload(onAdd: (fileName: string) => void, onError: (message: string) => void) {
+export function useScreenshotUpload(onAdd: (fileName: string) => void) {
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(0);
   const [dragOver, setDragOver] = useState(false);
 
   const upload = useCallback(
     async (files: File[]) => {
       const images = files.filter((f) => f.type.startsWith("image/"));
+      if (files.length) setUploadError(null);
       if (files.length && !images.length) {
-        onError("Only images can be attached (PNG, JPG, WEBP, GIF)");
+        setUploadError("Only images can be attached (PNG, JPG, WEBP, GIF)");
         return;
       }
       if (!images.length) return;
@@ -27,13 +30,13 @@ export function useScreenshotUpload(onAdd: (fileName: string) => void, onError: 
           if (!res.ok || !json.fileName) throw new Error(json.error ?? `Upload failed (${res.status})`);
           onAdd(json.fileName);
         } catch (e) {
-          onError(e instanceof Error ? e.message : "Upload failed");
+          setUploadError(e instanceof Error ? e.message : "Upload failed");
         } finally {
           setUploading((n) => n - 1);
         }
       }
     },
-    [onAdd, onError],
+    [onAdd],
   );
 
   useEffect(() => {
@@ -65,5 +68,5 @@ export function useScreenshotUpload(onAdd: (fileName: string) => void, onError: 
     },
   };
 
-  return { uploading, dragOver, upload, dropProps };
+  return { uploading, uploadError, dragOver, upload, dropProps };
 }

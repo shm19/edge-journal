@@ -11,7 +11,8 @@
   --color-muted: #a1a1aa;
   --color-faint: #8b8b95;
   --color-accent: #818cf8;
-  --color-accent-strong: #6366f1;
+  --color-accent-strong: #5b5ef0; /* button background: white text on it is 4.88:1 (AA) */
+  --color-accent-hover: #4f52e8;
   --color-win: #34d399;
   --color-loss: #fb7185;
   --color-be: #a1a1aa;

@@ -8,7 +8,7 @@ import { IdeaTable } from "@/components/idea-table";
 import { Card, CardHeader, EmptyState, LinkButton, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { fmtCost, fmtDate, fmtDrawdown, fmtPct, fmtProfitFactor, fmtR } from "@/lib/format";
-import { mistakeSummary, observationStats, primaryPoints } from "@/lib/analytics";
+import { mistakeRateLabel, mistakeSummary, observationStats, primaryPoints } from "@/lib/analytics";
 import { loadIdeas } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 import { inBuckets, isOpen } from "@/lib/status";
@@ -55,7 +55,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .sort((a, b) => (b.summary.expectancy ?? -99) - (a.summary.expectancy ?? -99));
 
   const mistakes = mistakeSummary(taken);
-  const mistakeRate = taken.length ? taken.filter((i) => i.mistakes.length).length / taken.length : null;
+  const mistakeRate = mistakeRateLabel(taken);
 
   const fwd = summarize(primaryPoints(inBuckets(inRange, "forward")), be);
   const skipped = summarize(primaryPoints(inBuckets(inRange, "skips")), be);
@@ -117,7 +117,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Kpi label="Expectancy" value={<RValue r={s.expectancy} be={0} />} sub="avg R per trade" />
         <Kpi label="Total" value={<RValue r={s.totalR} be={0} />} sub={`best ${fmtR(s.best)} · worst ${fmtR(s.worst)}`} />
         <Kpi label="Profit factor" value={fmtProfitFactor(s)} sub={`avg win ${fmtR(s.avgWin)}`} />
-        <Kpi label="Max drawdown" value={<span className={s.maxDrawdown > 0 ? "text-loss" : "text-faint"}>{fmtDrawdown(s)}</span>} sub={`longest losing streak ${s.longestLossStreak}`} />
+        <Kpi label="Max drawdown" value={<span className={s.maxDrawdown > 0 ? "text-loss" : "text-be"}>{fmtDrawdown(s)}</span>} sub={`longest losing streak ${s.longestLossStreak}`} />
       </div>
 
       <div className="mt-5 grid grid-cols-3 gap-5">
@@ -158,7 +158,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Card>
           <CardHeader
             title="Costliest mistakes"
-            description={mistakeRate != null ? `${fmtPct(mistakeRate)} of taken trades had a mistake · Measured against the linked alternative. Rows can share the same lost R.` : "Measured against the linked alternative. Rows can share the same lost R."}
+            description={mistakeRate != null ? `${mistakeRate} · Measured against the linked alternative. Rows can share the same lost R.` : "Measured against the linked alternative. Rows can share the same lost R."}
             action={<Link href="/analytics?group=mistake" className="text-xs text-accent">Analyze →</Link>}
           />
           <ul className="divide-y divide-line px-4 pb-2">
@@ -168,7 +168,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="flex shrink-0 items-center gap-3 text-xs tabular">
                   <span className="text-faint">×{g.count}</span>
                   {g.costKnown < g.count && <span className="text-faint">{g.costKnown} of {g.count} measured</span>}
-                  {g.costKnown ? <span className={cn("font-semibold", g.cost > 0 ? "text-loss" : "text-win")}>{fmtCost(g.cost)}</span> : <span className="text-faint" title="No cost entered or measurable yet">not measured</span>}
+                  {g.costKnown ? <span className={cn("font-semibold", g.cost > 0 ? "text-loss" : g.cost < 0 ? "text-win" : "text-be")}>{fmtCost(g.cost)}</span> : <span className="text-faint" title="No cost entered or measurable yet">not measured</span>}
                 </span>
               </li>
             ))}

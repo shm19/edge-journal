@@ -169,10 +169,15 @@ export function SetupEditor({ initial, tradeCount = 0 }: { initial: SetupForm; t
           )}
           <div className="flex items-center gap-2">
             {error && <span className="text-sm text-loss">{error}</span>}
+            {!f.name.trim() && !error && (
+              <span id="setup-name-hint" className="text-sm text-faint">
+                Give the setup a name
+              </span>
+            )}
             <Button variant="ghost" onClick={() => router.push(f.id ? `/setups/${f.id}` : "/setups")}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={submit} disabled={pending || !f.name.trim()}>
+            <Button variant="primary" onClick={submit} disabled={pending || !f.name.trim()} aria-describedby={f.name.trim() ? undefined : "setup-name-hint"}>
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save
             </Button>
           </div>

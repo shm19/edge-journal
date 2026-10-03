@@ -8,10 +8,13 @@ import { saveIdea, saveScenarioType } from "@/lib/actions";
 import {
   buildSavePayload,
   emptyScenario,
+  errorField,
   hasPrices,
+  inlineMessage,
   isObservationOnly,
   newKey,
   patchScenario,
+  pricesReady,
   removeScenario,
   toObservation,
   toPriceMode,
@@ -58,6 +61,10 @@ export function IdeaEditor({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const saving = useRef(false);
+  // Set once a save succeeded, so the unsaved-changes guards let the redirect through.
+  const saved = useRef(false);
+  // The field a failed save points at. Shown only while the form is unchanged since that save (any edit clears it).
+  const [failed, setFailed] = useState<{ id: string; message: string; at: EditorIdea } | null>(null);
   // Date boxes holding text that is not a valid date-time; saving is blocked meanwhile (it would drop the text).
   const [invalidDates, setInvalidDates] = useState<string[]>([]);
   const onInvalidDate = useCallback(
@@ -67,6 +74,7 @@ export function IdeaEditor({
   );
   const [baseline] = useState(() => JSON.stringify(initial));
   const dirty = JSON.stringify(idea) !== baseline;
+  const fieldError = failed && failed.at === idea ? failed : null;
 
   const set = useCallback(<K extends keyof EditorIdea>(k: K, v: EditorIdea[K]) => setIdea((p) => ({ ...p, [k]: v })), []);
   const setup = setups.find((s) => s.id === idea.setupId) ?? null;
@@ -82,7 +90,7 @@ export function IdeaEditor({
       })),
     [],
   );
-  const { uploading, dragOver, upload, dropProps } = useScreenshotUpload(addAttachment, setError);
+  const { uploading, uploadError, dragOver, upload, dropProps } = useScreenshotUpload(addAttachment);
 
   const switchObservationOnly = (on: boolean) => {
     if (!on) return setIdea(toPriceMode);
@@ -100,13 +108,43 @@ export function IdeaEditor({
     setIdea((p) => ({ ...p, scenarios: [...p.scenarios, { ...emptyScenario(false, typeId), ...base }] }));
   };
 
-  // Unsaved-changes guard.
+  // Unsaved-changes guard: reload / close tab (browser prompt) and in-app links (same confirm as Cancel).
   useEffect(() => {
     if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!saved.current) e.preventDefault();
+    };
+    const onClick = (e: MouseEvent) => {
+      if (saved.current || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || (a.target && a.target !== "_self") || a.hasAttribute("download")) return;
+      const to = new URL(a.href, window.location.href);
+      if (to.origin !== window.location.origin || (to.pathname === window.location.pathname && to.search === window.location.search)) return;
+      if (!confirm("Discard your unsaved changes?")) {
+        e.preventDefault();
+        e.stopPropagation(); // capture phase: Next's Link handler never sees the click
+      }
+    };
     window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("click", onClick, true);
+    };
   }, [dirty]);
+
+  /** Show a save error in the bar and, when it is about one field, mark that field, scroll to it and focus it. */
+  const fail = useCallback(
+    (message: string, field = errorField(message, idea.scenarios)) => {
+      setError(message);
+      if (!field) return;
+      setFailed({ id: field, message: inlineMessage(message), at: idea });
+      const el = document.getElementById(field);
+      el?.scrollIntoView({ block: "center" });
+      el?.focus({ preventScroll: true });
+    },
+    [idea],
+  );
 
   const submit = useCallback(() => {
     if (saving.current || pending) return;
@@ -114,14 +152,15 @@ export function IdeaEditor({
       setError("Wait for screenshots to finish uploading");
       return;
     }
+    setError(null);
+    setFailed(null);
     if (invalidDates.length) {
-      setError(`Fix the ${invalidDates.join(" and ")} date first: use YYYY-MM-DD HH:mm (UTC).`);
+      fail(`Fix the ${invalidDates.join(" and ")} date first: use YYYY-MM-DD HH:mm (UTC).`, `idea-${invalidDates[0].toLowerCase()}`);
       return;
     }
-    setError(null);
     const built = buildSavePayload(idea);
     if (!built.ok) {
-      setError(built.error);
+      fail(built.error, built.field);
       return;
     }
     saving.current = true;
@@ -129,13 +168,15 @@ export function IdeaEditor({
       const res = await saveIdea(built.payload);
       if (!res.ok) {
         saving.current = false;
-        setError(res.error);
+        fail(res.error);
         return;
       }
-      router.push(`/ideas/${res.data!.id}`);
+      saved.current = true;
+      // replace, not push: Back from the saved idea must not return to this form.
+      router.replace(`/ideas/${res.data!.id}`);
       router.refresh();
     });
-  }, [idea, pending, uploading, invalidDates, router]);
+  }, [idea, pending, uploading, invalidDates, router, fail]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -162,7 +203,7 @@ export function IdeaEditor({
     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-5" {...dropProps}>
       {/* ---------- Left column: context ---------- */}
       <div className="space-y-5">
-        <ContextCard idea={idea} setIdea={setIdea} set={set} setups={setups} symbols={symbols} onInvalidDate={onInvalidDate} />
+        <ContextCard idea={idea} setIdea={setIdea} set={set} setups={setups} symbols={symbols} onInvalidDate={onInvalidDate} fieldError={fieldError} />
         {setup && setup.checklist.length > 0 && <ChecklistCard setup={setup} state={idea.checklistState} onChange={(v) => set("checklistState", v)} />}
         <TagsCard tags={tags} selected={idea.tagIds} onChange={(ids) => set("tagIds", ids)} />
       </div>
@@ -192,7 +233,7 @@ export function IdeaEditor({
             }
           />
           <div className="space-y-3 px-4 pb-4">
-            {isForward && (
+            {isForward && (observationOnly || pricesReady(idea)) && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-panel-2/50 px-3 py-2.5">
                 <span className="text-sm text-muted">Did it play out?</span>
                 <Segmented
@@ -206,6 +247,11 @@ export function IdeaEditor({
                   ]}
                 />
               </div>
+            )}
+            {isForward && !observationOnly && !pricesReady(idea) && (
+              <p className="text-xs text-muted">
+                Fill in entry and stop to track prices. For a plain yes / no result, switch to <strong className="font-medium text-fg">Hit / Miss</strong> above.
+              </p>
             )}
             {!observationOnly && (
               <>
@@ -221,6 +267,7 @@ export function IdeaEditor({
                     scenarioTypes={orderedTypes}
                     onChange={(patch) => setIdea((p) => patchScenario(p, s.key, patch))}
                     onRemove={s.isPrimary ? undefined : () => setIdea((p) => removeScenario(p, s.key))}
+                    fieldError={fieldError}
                   />
                 ))}
                 <TypePicker
@@ -245,7 +292,7 @@ export function IdeaEditor({
 
         <NotesCard idea={idea} set={set} />
         <MistakesCard idea={idea} setIdea={setIdea} mistakeTypes={mistakeTypes} setMistakeTypes={setMistakeTypes} scenarioTypes={orderedTypes} />
-        <ScreenshotsCard attachments={idea.attachments} onChange={(a) => set("attachments", a)} upload={upload} uploading={uploading} dragOver={dragOver} />
+        <ScreenshotsCard attachments={idea.attachments} onChange={(a) => set("attachments", a)} upload={upload} uploading={uploading} uploadError={uploadError} dragOver={dragOver} />
 
         <div className="sticky bottom-4 z-30 flex items-center justify-between gap-3 rounded-xl border border-line bg-panel/95 px-4 py-3 backdrop-blur">
           <div className="min-w-0 text-sm">

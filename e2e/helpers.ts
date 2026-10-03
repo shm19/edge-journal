@@ -45,9 +45,10 @@ export async function newIdea(page: Page, status: "Taken" | "Skipped" | "Forward
 
 /** Fill the n-th scenario card (0 = primary). */
 export async function fillPrices(page: Page, n: number, p: { entry: string; stop: string; target?: string }) {
-  await page.getByLabel("Entry", { exact: true }).nth(n).fill(p.entry);
-  await page.getByLabel("Stop", { exact: true }).nth(n).fill(p.stop);
-  if (p.target) await page.getByLabel("Target (FTA)").nth(n).fill(p.target);
+  const who = n === 0 ? "Primary" : `Alternative ${n}`;
+  await page.getByLabel(`${who} entry price`).fill(p.entry);
+  await page.getByLabel(`${who} stop price`).fill(p.stop);
+  if (p.target) await page.getByLabel(`${who} target price`).fill(p.target);
 }
 
 export async function saveIdea(page: Page) {

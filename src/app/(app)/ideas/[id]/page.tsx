@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { BIAS_LABEL, EXIT_LABEL, fmtCost, fmtDateTime, fmtPrice, fmtR, REGIME_LABEL } from "@/lib/format";
 import { getIdea, ideaNeighbours } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
+import { isHypothetical } from "@/lib/status";
 import { sessionOf, tradeMistakeCost } from "@/lib/stats";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +38,8 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
   );
 
   const primary = idea.primary;
+  // Skipped / missed / forward-test results are what would have happened, not realised profit.
+  const hypothetical = isHypothetical(idea.status);
   const checklist = idea.setup?.checklist ?? [];
   const checked = checklist.filter((c) => idea.checklistState[c]).length;
 
@@ -65,7 +68,10 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
             {primary?.exitReason === "not_filled" ? (
               <span className="text-lg text-faint">not filled</span>
             ) : primary ? (
-              <RValue r={primary.r} be={beThresholdR} className="text-2xl" />
+              <>
+                {hypothetical && primary.r != null && <span className="text-sm text-muted">if taken</span>}
+                <RValue r={primary.r} be={beThresholdR} className="text-2xl" />
+              </>
             ) : null}
             {idea.outcome && (
               <span className={cn("text-lg font-semibold", idea.outcome === "hit" ? "text-win" : "text-loss")}>
@@ -77,7 +83,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
             <SetupBadge setup={idea.setup} />
             <span>{fmtDateTime(idea.openedAt)}</span>
             {idea.closedAt && <span>→ {fmtDateTime(idea.closedAt)}</span>}
-            {idea.closedAt === idea.openedAt && primary?.exitPrice != null && (
+            {idea.status === "taken" && idea.closedAt === idea.openedAt && primary?.exitPrice != null && (
               <span className="text-xs text-faint">Closed time = opened time — set the real close time</span>
             )}
             <span>{sessionOf(idea.openedAt)}</span>
@@ -98,6 +104,68 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
+      {/* Full width: the alternatives comparison is the headline feature and needs all its columns. */}
+      {idea.scenarios.length > 0 && (
+      <Card className="mb-5">
+        <CardHeader title="Scenarios" description="R of each scenario, and how alternatives compare to the primary." />
+        <div className="overflow-x-auto px-2 pb-3">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wider text-faint">
+                <th className="px-2 py-2 font-medium">Scenario</th>
+                <th className="px-2 py-2 text-right font-medium">Entry</th>
+                <th className="px-2 py-2 text-right font-medium">Stop</th>
+                <th className="px-2 py-2 text-right font-medium">Target</th>
+                <th className="px-2 py-2 text-right font-medium">Exit</th>
+                <th className="px-2 py-2 text-right font-medium">R:R</th>
+                <th className="px-2 py-2 text-right font-medium">R</th>
+                <th className="px-2 py-2 text-right font-medium whitespace-nowrap">vs primary</th>
+              </tr>
+            </thead>
+            <tbody className="tabular">
+              {[...idea.scenarios]
+                .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
+                .map((s) => {
+                  const delta = !s.isPrimary && s.r != null && primary?.r != null ? s.r - primary.r : null;
+                  return (
+                    <tr key={s.id} className={cn("border-t border-line align-top", s.isPrimary && "bg-accent/[0.04]")}>
+                      <td className="px-2 py-2">
+                        <p className="font-medium">
+                          {s.isPrimary ? (idea.status === "taken" || idea.status === "backtest" ? "Actual" : "Plan") : (s.typeName ?? "Alternative")}
+                        </p>
+                        {s.exitReason && <p className="text-xs text-faint">{EXIT_LABEL[s.exitReason]}</p>}
+                        {s.notes && <p className="mt-0.5 max-w-xs text-xs break-words text-muted">{s.notes}</p>}
+                      </td>
+                      <td className="px-2 py-2 text-right">{fmtPrice(s.entry)}</td>
+                      <td className="px-2 py-2 text-right">{fmtPrice(s.stop)}</td>
+                      <td className="px-2 py-2 text-right">{fmtPrice(s.target)}</td>
+                      <td className="px-2 py-2 text-right">{fmtPrice(s.exitPrice)}</td>
+                      <td className={cn("px-2 py-2 text-right", s.rr != null && s.rr < minRR && "text-warn")}>{s.rr == null ? "—" : s.rr.toFixed(2)}</td>
+                      <td className="px-2 py-2 text-right whitespace-nowrap">
+                        {s.exitReason === "not_filled" ? (
+                          <span className="text-faint">not filled</span>
+                        ) : s.r == null ? (
+                          <span className="text-faint">open</span>
+                        ) : (
+                          <RValue r={s.r} be={beThresholdR} />
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right whitespace-nowrap">
+                        {delta == null ? (
+                          <span className="text-faint">—</span>
+                        ) : (
+                          <span className={delta > 0 ? "text-win" : delta < 0 ? "text-loss" : "text-be"}>{fmtR(delta)}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      )}
+
       <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-5">
         <div className="min-w-0 space-y-5">
           {idea.scenarios.length === 0 && (
@@ -108,67 +176,6 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
               </span>
             </Card>
           )}
-          {idea.scenarios.length > 0 && (
-          <Card>
-            <CardHeader title="Scenarios" description="R of each scenario, and how alternatives compare to the primary." />
-            <div className="overflow-x-auto px-2 pb-3">
-              <table className="w-full min-w-[560px] text-sm">
-                <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wider text-faint">
-                    <th className="px-2 py-2 font-medium">Scenario</th>
-                    <th className="px-2 py-2 text-right font-medium">Entry</th>
-                    <th className="px-2 py-2 text-right font-medium">Stop</th>
-                    <th className="px-2 py-2 text-right font-medium">Target</th>
-                    <th className="px-2 py-2 text-right font-medium">Exit</th>
-                    <th className="px-2 py-2 text-right font-medium">R:R</th>
-                    <th className="px-2 py-2 text-right font-medium">R</th>
-                    <th className="px-2 py-2 text-right font-medium">vs primary</th>
-                  </tr>
-                </thead>
-                <tbody className="tabular">
-                  {[...idea.scenarios]
-                    .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
-                    .map((s) => {
-                      const delta = !s.isPrimary && s.r != null && primary?.r != null ? s.r - primary.r : null;
-                      return (
-                        <tr key={s.id} className={cn("border-t border-line align-top", s.isPrimary && "bg-accent/[0.04]")}>
-                          <td className="px-2 py-2">
-                            <p className="font-medium">
-                              {s.isPrimary ? (idea.status === "taken" || idea.status === "backtest" ? "Actual" : "Plan") : (s.typeName ?? "Alternative")}
-                            </p>
-                            {s.exitReason && <p className="text-xs text-faint">{EXIT_LABEL[s.exitReason]}</p>}
-                            {s.notes && <p className="mt-0.5 max-w-xs text-xs text-muted">{s.notes}</p>}
-                          </td>
-                          <td className="px-2 py-2 text-right">{fmtPrice(s.entry)}</td>
-                          <td className="px-2 py-2 text-right">{fmtPrice(s.stop)}</td>
-                          <td className="px-2 py-2 text-right">{fmtPrice(s.target)}</td>
-                          <td className="px-2 py-2 text-right">{fmtPrice(s.exitPrice)}</td>
-                          <td className={cn("px-2 py-2 text-right", s.rr != null && s.rr < minRR && "text-warn")}>{s.rr == null ? "—" : s.rr.toFixed(2)}</td>
-                          <td className="px-2 py-2 text-right">
-                            {s.exitReason === "not_filled" ? (
-                              <span className="text-faint">not filled</span>
-                            ) : s.r == null ? (
-                              <span className="text-faint">open</span>
-                            ) : (
-                              <RValue r={s.r} be={beThresholdR} />
-                            )}
-                          </td>
-                          <td className="px-2 py-2 text-right">
-                            {delta == null ? (
-                              <span className="text-faint">—</span>
-                            ) : (
-                              <span className={delta > 0 ? "text-win" : delta < 0 ? "text-loss" : "text-be"}>{fmtR(delta)}</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-          )}
-
           {idea.mistakes.length > 0 && (
             <Card className="border-rose-500/25">
               <CardHeader
@@ -176,7 +183,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
                 action={
                   mistakeTotal != null ? (
                     <span
-                      className={cn("text-xs font-semibold tabular", mistakeTotal > 0 ? "text-loss" : "text-win")}
+                      className={cn("text-xs font-semibold tabular", mistakeTotal > 0 ? "text-loss" : mistakeTotal < 0 ? "text-win" : "text-be")}
                       title="Total for this trade: each alternative counted once, plus manual costs"
                     >
                       {fmtCost(mistakeTotal)}
@@ -194,7 +201,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
                       {m.linkedName && <p className="text-[11px] text-faint">measured against “{m.linkedName}”</p>}
                     </div>
                     {m.cost != null && (
-                      <span className={cn("shrink-0 text-xs font-semibold tabular", m.cost > 0 ? "text-loss" : "text-win")}>
+                      <span className={cn("shrink-0 text-xs font-semibold tabular", m.cost > 0 ? "text-loss" : m.cost < 0 ? "text-win" : "text-be")}>
                         {fmtCost(m.cost)}
                         {sharedIds.has(m.id) && <span className="font-normal text-faint"> (shared)</span>}
                       </span>
@@ -242,7 +249,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
           <Card className="grid grid-cols-2 gap-px overflow-hidden bg-line p-0">
             <Stat label="Planned R:R" value={primary?.rr == null ? "—" : primary.rr.toFixed(2)} warn={primary?.rr != null && primary.rr < minRR} />
             <Stat
-              label="Result"
+              label={hypothetical ? "Result (if taken)" : "Result"}
               value={
                 primary?.exitReason === "not_filled"
                   ? "Not filled"

@@ -5,6 +5,7 @@ import {
   DIMENSIONS,
   dimensionKeys,
   isDimension,
+  mistakeRateLabel,
   NO_TAG,
   mistakeSummary,
   observationStats,
@@ -118,16 +119,16 @@ describe("dimensionKeys", () => {
   });
   it("symbol, timeframe, direction, status", () => {
     expect(keys("symbol", makeIdea({ symbol: "ETH" }))).toEqual(["ETH"]);
-    expect(keys("timeframe")).toEqual(["—"]);
+    expect(keys("timeframe")).toEqual(["Not set"]);
     expect(keys("timeframe", makeIdea({ entryTimeframe: "1h" }))).toEqual(["1h"]);
     expect(keys("direction")).toEqual(["Long"]);
     expect(keys("direction", makeIdea({ direction: "short" }))).toEqual(["Short"]);
     expect(keys("status", makeIdea({ status: "forward_test" }))).toEqual(["Forward test"]);
   });
   it("bias and regime", () => {
-    expect(keys("bias")).toEqual(["—"]);
+    expect(keys("bias")).toEqual(["Not set"]);
     expect(keys("bias", makeIdea({ htfBias: "against" }))).toEqual(["Against HTF"]);
-    expect(keys("regime")).toEqual(["—"]);
+    expect(keys("regime")).toEqual(["Not set"]);
     expect(keys("regime", makeIdea({ regime: "trend" }))).toEqual(["Trend"]);
   });
   it("session, weekday, month use UTC", () => {
@@ -142,19 +143,19 @@ describe("dimensionKeys", () => {
     expect(keys("weekday", closed)).toEqual(["Mon"]);
   });
   it("followedPlan", () => {
-    expect(keys("followedPlan")).toEqual(["—"]);
+    expect(keys("followedPlan")).toEqual(["Not set"]);
     expect(keys("followedPlan", makeIdea({ followedPlan: true }))).toEqual(["Yes"]);
     expect(keys("followedPlan", makeIdea({ followedPlan: false }))).toEqual(["No"]);
   });
   it("exitReason and plannedRR read the primary", () => {
     expect(keys("exitReason")).toEqual(["Manual"]);
-    expect(keys("exitReason", makeIdea({ r: false }))).toEqual(["—"]);
+    expect(keys("exitReason", makeIdea({ r: false }))).toEqual(["Not set"]);
     const withRR = makeIdea({ scenarios: [makeScenario({ isPrimary: true, r: 1, rr: 2.5 })] });
     expect(keys("plannedRR", withRR)).toEqual(["2 – 3"]);
     expect(keys("plannedRR")).toEqual(["No target"]);
   });
   it("confidence", () => {
-    expect(keys("confidence")).toEqual(["—"]);
+    expect(keys("confidence")).toEqual(["Not set"]);
     expect(keys("confidence", makeIdea({ confidence: 4 }))).toEqual(["4/5"]);
   });
   it("checklist buckets", () => {
@@ -226,6 +227,20 @@ describe("mistakeSummary", () => {
   });
   it("all-unknown costs give costKnown 0", () => {
     expect(mistakeSummary([makeIdea({ mistakes: [makeMistake({ name: "A" })] })])[0]).toMatchObject({ count: 1, costKnown: 0, cost: 0 });
+  });
+});
+
+describe("mistakeRateLabel", () => {
+  it("counts every taken idea and says when open trades are in the denominator", () => {
+    const list = [makeIdea({ mistakes: [makeMistake()] }), makeIdea({ mistakes: [makeMistake()] }), makeIdea({ r: null })];
+    expect(mistakeRateLabel(list)).toBe("2 of 3 taken trades had a mistake (incl. 1 open)");
+  });
+  it("has no open note when everything is closed, and is singular for one trade", () => {
+    expect(mistakeRateLabel([makeIdea({ mistakes: [makeMistake()] })])).toBe("1 of 1 taken trade had a mistake");
+    expect(mistakeRateLabel([makeIdea(), makeIdea()])).toBe("0 of 2 taken trades had a mistake");
+  });
+  it("is null with no taken ideas", () => {
+    expect(mistakeRateLabel([])).toBeNull();
   });
 });
 

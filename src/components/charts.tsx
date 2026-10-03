@@ -64,7 +64,7 @@ export function EquityChart({
           formatter={(v) => [money ? fmtMoneyTick(Number(v)) : fmtR(Number(v)), money ? "Balance" : "Cumulative"]}
           labelFormatter={(_, p) => (p?.[0]?.payload as { label?: string })?.label ?? ""}
         />
-        <Area type="monotone" dataKey="cum" stroke={color} strokeWidth={2} fill="url(#eqFill)" dot={false} isAnimationActive={false} />
+        <Area type="linear" dataKey="cum" stroke={color} strokeWidth={2} fill="url(#eqFill)" dot={false} isAnimationActive={false} />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -101,7 +101,7 @@ export function MultiEquityChart({
         {series.map((s, i) => (
           <Line
             key={s.key}
-            type="monotone"
+            type="linear"
             dataKey={s.key}
             stroke={s.color ?? PALETTE[i % PALETTE.length]}
             strokeWidth={2}

@@ -2,7 +2,7 @@ import { Target, Trash2 } from "lucide-react";
 import type { ScenarioType } from "@/db/schema";
 import { EXIT_REASONS } from "@/db/schema";
 import { cn } from "@/lib/cn";
-import type { EditorScenario } from "@/lib/editor-shape";
+import { priceFieldId, type EditorScenario, type PriceField } from "@/lib/editor-shape";
 import { EXIT_LABEL, fmtR, rTone } from "@/lib/format";
 import { parsePrice } from "@/lib/price";
 import { plannedRR, scenarioR, stopIsValid, type Dir } from "@/lib/stats";
@@ -18,6 +18,7 @@ export function ScenarioCard({
   scenarioTypes,
   onChange,
   onRemove,
+  fieldError,
 }: {
   s: EditorScenario;
   index: number;
@@ -28,7 +29,15 @@ export function ScenarioCard({
   scenarioTypes: ScenarioType[];
   onChange: (patch: Partial<EditorScenario>) => void;
   onRemove?: () => void;
+  /** The field a failed save points at (its DOM id) and the message to show under it. */
+  fieldError?: { id: string; message: string } | null;
 }) {
+  const who = s.isPrimary ? "Primary" : `Alternative ${index}`;
+  const price = (field: PriceField) => ({
+    id: priceFieldId(s.key, field),
+    ariaLabel: `${who} ${field} price`,
+    error: fieldError?.id === priceFieldId(s.key, field) ? fieldError.message : undefined,
+  });
   const entry = parsePrice(s.entry);
   const stop = parsePrice(s.stop);
   const target = parsePrice(s.target);
@@ -89,11 +98,12 @@ export function ScenarioCard({
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2">
-        <PriceInput label="Entry" value={s.entry} onChange={(v) => onChange({ entry: v })} />
-        <PriceInput label={s.isPrimary ? "Stop" : "Stop (initial)"} value={s.stop} onChange={(v) => onChange({ stop: v })} invalid={badStop} />
-        <PriceInput label="Target (FTA)" value={s.target} onChange={(v) => onChange({ target: v })} />
+        <PriceInput label="Entry" {...price("entry")} value={s.entry} onChange={(v) => onChange({ entry: v })} />
+        <PriceInput label={s.isPrimary ? "Stop" : "Stop (initial)"} {...price("stop")} value={s.stop} onChange={(v) => onChange({ stop: v })} invalid={badStop} />
+        <PriceInput label="Target (FTA)" {...price("target")} value={s.target} onChange={(v) => onChange({ target: v })} />
         <PriceInput
           label="Exit"
+          {...price("exit")}
           value={notFilled ? "" : s.exitPrice}
           disabled={notFilled}
           onChange={(v) => onChange({ exitPrice: v, exitReason: s.exitReason === "not_filled" ? "" : s.exitReason })}
@@ -150,12 +160,20 @@ export function ScenarioCard({
 
 function PriceInput({
   label,
+  id,
+  ariaLabel,
+  error,
   value,
   onChange,
   invalid,
   disabled,
 }: {
   label: string;
+  id: string;
+  /** Accessible name that says which scenario the box belongs to ("Primary entry price"). */
+  ariaLabel: string;
+  /** Message from a failed save. */
+  error?: string;
   value: string;
   onChange: (v: string) => void;
   invalid?: boolean;
@@ -169,16 +187,24 @@ function PriceInput({
     <label className="flex flex-col gap-1">
       <span className="text-[11px] text-faint">{label}</span>
       <input
+        id={id}
+        aria-label={ariaLabel}
         inputMode="decimal"
         value={value}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.value.replace(/[^0-9.,\s]/g, ""))}
+        aria-invalid={invalid || unparseable || !!error || undefined}
+        // Not filtered: a typo must stay visible ("Not a number") instead of silently turning into an empty box.
+        onChange={(e) => onChange(e.target.value)}
         className={cn(
           "h-8 w-full rounded-md border bg-panel px-2 text-sm tabular focus:outline-none focus:ring-2 disabled:opacity-40",
-          invalid || unparseable ? "border-rose-500/60 focus:ring-rose-500/30" : "border-line focus:border-accent/70 focus:ring-accent/20",
+          invalid || unparseable || error ? "border-rose-500/60 focus:ring-rose-500/30" : "border-line focus:border-accent/70 focus:ring-accent/20",
         )}
       />
-      {unparseable ? <span className="text-[10px] text-loss">Not a number</span> : echo ? <span className="text-[10px] text-faint">= {echo}</span> : null}
+      {unparseable ? (
+        <span className="text-[10px] text-loss">Not a number</span>
+      ) : error && error.length < 40 ? (
+        <span className="text-[10px] text-loss">{error}</span>
+      ) : echo ? <span className="text-[10px] text-faint">= {echo}</span> : null}
     </label>
   );
 }

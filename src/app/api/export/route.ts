@@ -11,6 +11,7 @@ export async function GET(request: Request) {
   if (!(await isAuthenticated())) return new Response("unauthorized", { status: 401 });
   const format = new URL(request.url).searchParams.get("format") ?? "json";
   const stamp = new Date().toISOString().slice(0, 10);
+  const safe = { "cache-control": "no-store", "x-content-type-options": "nosniff" };
 
   if (format === "db") {
     // Stage in a private (0700) temp dir with a 0600 file, never a predictable name in the shared tmpdir.
@@ -26,6 +27,7 @@ export async function GET(request: Request) {
     }
     return new Response(new Uint8Array(data), {
       headers: {
+        ...safe,
         "content-type": "application/vnd.sqlite3",
         "content-disposition": `attachment; filename="edge-journal-${stamp}.db"`,
       },
@@ -59,6 +61,7 @@ export async function GET(request: Request) {
     });
     return new Response([header.join(","), ...rows].join("\n"), {
       headers: {
+        ...safe,
         "content-type": "text/csv; charset=utf-8",
         "content-disposition": `attachment; filename="edge-journal-${stamp}.csv"`,
       },
@@ -80,6 +83,7 @@ export async function GET(request: Request) {
   };
   return new Response(JSON.stringify(dump, null, 2), {
     headers: {
+      ...safe,
       "content-type": "application/json",
       "content-disposition": `attachment; filename="edge-journal-${stamp}.json"`,
     },

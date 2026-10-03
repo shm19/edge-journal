@@ -60,7 +60,7 @@ test("CSV export has the header and the trade row", async ({ page }) => {
 
 test("sign out returns to /login and protected pages redirect", async ({ page }) => {
   await page.goto("/settings");
-  await page.getByRole("main").getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/ideas");
   await expect(page).toHaveURL(/\/login\?next=%2Fideas/);

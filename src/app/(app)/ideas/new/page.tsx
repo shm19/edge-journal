@@ -22,7 +22,8 @@ export default async function NewIdeaPage({ searchParams }: { searchParams: Prom
         initial={newEditorIdea({
           setupId: setup?.id ?? null,
           status,
-          symbol: sp.symbol?.toUpperCase() ?? lastSymbol(),
+          // A new idea never starts with an empty Coin: ?symbol=, else the last coin used, else the first coin in Settings.
+          symbol: sp.symbol?.toUpperCase() ?? lastSymbol() ?? settings.symbols[0],
           timeframe: setup?.defaultTimeframe,
           riskPct: settings.defaultRiskPct,
         })}

@@ -20,7 +20,7 @@ describe("fmtDrawdown", () => {
 
 describe("date formatting + formatter cache", () => {
   it("formats in UTC", () => {
-    expect(fmtDate("2026-09-10T23:30:00.000Z")).toBe("10 Sept 26");
+    expect(fmtDate("2026-09-10T23:30:00.000Z")).toBe("10 Sep 26");
     expect(fmtDateTime("2026-09-10T23:30:00.000Z")).toContain("UTC");
     expect(fmtDate(null)).toBe("—");
   });
@@ -66,7 +66,7 @@ describe("number formatting", () => {
   });
   it("fmtDateTime and fmtDate dash empty input; fmtDateTime shows the time", () => {
     expect(fmtDateTime(null)).toBe("—");
-    expect(fmtDateTime("2026-09-10T23:30:00.000Z")).toBe("10 Sept 2026, 23:30 UTC");
+    expect(fmtDateTime("2026-09-10T23:30:00.000Z")).toBe("10 Sep 2026, 23:30 UTC");
   });
 });
 

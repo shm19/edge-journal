@@ -202,10 +202,17 @@ function upgrade(db: DB) {
   });
 }
 
+/**
+ * The `seedVersion` setting is the "this DB has been seeded" marker, so emptying setups and scenario types
+ * in the UI never triggers a fresh seed (it would collide with the rows kept by the user and brick the app).
+ * Without the marker: a DB that already holds any data is a legacy one (upgrade from v1); only a truly empty DB is seeded.
+ */
 export function seedIfEmpty(db: DB) {
-  const [{ n }] = db.select({ n: count() }).from(schema.setups).all();
-  const [{ t }] = db.select({ t: count() }).from(schema.scenarioTypes).all();
-  if (n > 0 || t > 0) return upgrade(db);
+  if (db.select().from(schema.settings).where(eq(schema.settings.key, "seedVersion")).get()) return upgrade(db);
+  const counts = [schema.setups, schema.scenarioTypes, schema.tags, schema.mistakeTypes, schema.ideas].map(
+    (table) => db.select({ n: count() }).from(table).get()!.n,
+  );
+  if (counts.some((n) => n > 0)) return upgrade(db);
 
   db.transaction((tx) => {
     tx.insert(schema.setups).values(SETUPS).run();

@@ -55,6 +55,45 @@ describe("POST /api/uploads", () => {
     const req = new Request("http://localhost/api/uploads", { method: "POST", headers: { "content-type": "multipart/form-data; boundary=x" }, body: "garbage" });
     expect(await (await c.uploads.POST(req)).json()).toEqual({ error: "Couldn't read the upload" });
   });
+  it("caps a chunked upload (no Content-Length) while streaming, without buffering it all", async () => {
+    let pulled = 0;
+    const chunk = new Uint8Array(1024 * 1024);
+    const body = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        pulled++;
+        if (pulled > 200) ctrl.close(); // would be 200 MB if never cut off
+        else ctrl.enqueue(chunk);
+      },
+    });
+    const req = new Request("http://localhost/api/uploads", {
+      method: "POST",
+      headers: { "content-type": "multipart/form-data; boundary=x" },
+      body,
+      duplex: "half",
+    } as RequestInit);
+    expect(req.headers.get("content-length")).toBeNull();
+    const res = await c.uploads.POST(req);
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: "Image is larger than 10 MB" });
+    expect(pulled).toBeLessThan(40); // stopped near 10 MB, far from 200
+    expect(fs.existsSync(c.UPLOAD_DIR) ? fs.readdirSync(c.UPLOAD_DIR) : []).toEqual([]);
+  });
+  it("accepts a chunked upload under the cap", async () => {
+    const form = new FormData();
+    form.set("file", new File([PNG], "a.png"));
+    const encoded = new Response(form); // one encoding: the boundary in the header must match the body
+    const type = encoded.headers.get("content-type")!;
+    const bytes = new Uint8Array(await encoded.arrayBuffer());
+    const body = new ReadableStream<Uint8Array>({
+      start(ctrl) {
+        ctrl.enqueue(bytes.subarray(0, 40));
+        ctrl.enqueue(bytes.subarray(40));
+        ctrl.close();
+      },
+    });
+    const req = new Request("http://localhost/api/uploads", { method: "POST", headers: { "content-type": type }, body, duplex: "half" } as RequestInit);
+    expect((await c.uploads.POST(req)).status).toBe(200);
+  });
   it("rejects non-images, missing files, and oversized files", async () => {
     expect((await c.uploads.POST(upload(new Blob(["<svg/>"]), "a.png"))).status).toBe(415);
     expect((await c.uploads.POST(upload("just text"))).status).toBe(400);
@@ -73,7 +112,10 @@ describe("GET /api/uploads/[name]", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("image/png");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'");
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; sandbox");
+    expect(res.headers.get("content-disposition")).toBe("inline");
+    // names are random, so a year-long immutable cache is fine, but never a shared cache
+    expect(res.headers.get("cache-control")).toBe("private, max-age=31536000, immutable");
   });
   it("404s on missing files and on traversal-looking names", async () => {
     expect((await get("nope.png")).status).toBe(404);
@@ -115,6 +157,13 @@ describe("GET /api/export", () => {
   it("requires auth for every format", async () => {
     auth.ok = false;
     for (const f of [undefined, "csv", "db"]) expect((await get(f)).status).toBe(401);
+  });
+  it("never lets the journal be cached or sniffed, in any format", async () => {
+    for (const f of [undefined, "csv", "db"]) {
+      const res = await get(f);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    }
   });
   it("exports JSON by default", async () => {
     await addIdea();

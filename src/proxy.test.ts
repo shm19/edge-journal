@@ -46,6 +46,17 @@ describe("proxy", () => {
     expect((await proxy(req("/ideas", "garbage"))).status).toBe(307);
   });
 
+  it("rejects a session minted before the password changed", async () => {
+    const old = process.env.APP_PASSWORD;
+    process.env.APP_PASSWORD = "a-brand-new-password";
+    try {
+      expect((await proxy(req("/ideas", token))).status).toBe(307);
+      expect((await proxy(req("/api/export", token))).status).toBe(401);
+    } finally {
+      process.env.APP_PASSWORD = old;
+    }
+  });
+
   it("answers 401 JSON for /api without a session", async () => {
     const res = await proxy(req("/api/export"));
     expect(res.status).toBe(401);
