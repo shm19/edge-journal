@@ -496,7 +496,7 @@ Add `npm run e2e`.
 - [x] 5 `npm run check` green (452 tests in 29 files, was 362/26); `npm run e2e` 18/18.
 - [x] 6 Docs: AGENTS, architecture, testing, e2e, CHANGELOG.
 - [x] 7 Browser (1280 px): journal "Any date" popover (presets, From/To, UTC today highlighted), editor Closed popover (Now, Same as opened, Done; time seeded from Opened). Also found and fixed a Step 5 regression: the filter-bar dropdowns each took a full row (now `size="sm"` is `w-auto`).
-- [x] 8 Committed (see `git log`).
+- [x] 8 Committed: `6457db2`.
 
 **Notes:**
 - Closed field: "Same as opened"; an empty Closed calendar opens on the Opened month and a day pick takes Opened's time. Typed entry accepts a full value, a date alone, a time alone, or a pasted ISO string; the format error shows on blur. Save is blocked while Opened/Closed hold invalid text. A range pick closes on the end click; presets are Today, Yesterday, This week (Mon to today), Last 7 days, Last 30 days, This month. Invalid or inverted `from`/`to` in the URL are normalised server-side.
