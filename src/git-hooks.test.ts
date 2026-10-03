@@ -32,6 +32,8 @@ function sandbox() {
   git("config", "user.name", "t");
   git("config", "commit.gpgsign", "false");
   fs.cpSync(HOOKS, path.join(repo, ".githooks"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "scripts"));
+  fs.copyFileSync(path.resolve(__dirname, "../scripts/verify.sh"), path.join(repo, "scripts", "verify.sh"));
   fs.mkdirSync(path.join(repo, "node_modules"));
   git("config", "core.hooksPath", ".githooks");
   const commit = (file: string, failOn = "", extra: string[] = []) => {
@@ -47,7 +49,8 @@ function sandbox() {
     env.FAIL_ON = failOn;
     return spawnSync("sh", [path.join(repo, ".githooks", name)], { cwd: repo, env, encoding: "utf8" });
   };
-  return { commit, commits, calls, runHook };
+  const gitDir = path.join(repo, ".git");
+  return { commit, commits, calls, runHook, git, gitDir, repo };
 }
 
 afterAll(() => {
@@ -122,5 +125,28 @@ describe("pre-push", () => {
     const check = s2.runHook("pre-push", "check");
     expect(check.status).not.toBe(0);
     expect(s2.calls()).toEqual(["npm run check --silent"]);
+  });
+
+  it("records a green run for a clean commit and then skips it (so a push never waits on the slow suites)", () => {
+    const s = sandbox();
+    s.commit("src/a.ts", "", ["--no-verify"]);
+    // the sandbox's own files are untracked: commit them so the tree is clean
+    s.git("add", "-A");
+    s.git("commit", "-q", "-m", "files", "--no-verify");
+    const first = s.runHook("pre-push");
+    expect(first.status).toBe(0);
+    expect(first.stdout).toContain("recorded as verified");
+    expect(fs.readdirSync(s.gitDir).some((f) => f.startsWith("verified-"))).toBe(true);
+    const callsAfterFirst = s.calls().length;
+    const second = s.runHook("pre-push");
+    expect(second.status).toBe(0);
+    expect(second.stdout).toContain("already passed the full gate");
+    expect(s.calls().length).toBe(callsAfterFirst); // nothing ran again
+  });
+
+  it("does not record a verified marker when the working tree is dirty or the run fails", () => {
+    const s = sandbox(); // untracked files => dirty tree
+    s.runHook("pre-push");
+    expect(fs.readdirSync(s.gitDir).some((f) => f.startsWith("verified-"))).toBe(false);
   });
 });

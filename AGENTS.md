@@ -50,7 +50,7 @@ This is the entry point for any agent or developer working on **Edge Journal**: 
 | `npm run lint` | ESLint. React-compiler rules are on: no `setState` in effects, no ref reads during render |
 | `npm run build` | Production build (standalone output) |
 | `npm run hooks` | One-time per clone: installs the versioned git hooks (`.githooks/`): **pre-commit** = lint + typecheck + unit tests (~1 min; docs-only commits skip), **pre-push** = full check + build + e2e (a few minutes). They run the tests themselves, so they cost no model tokens. Bypass once with `--no-verify`. See [docs/testing.md](docs/testing.md) |
-| `npm run verify` | The full gate by hand: `npm run check` then `npm run e2e` |
+| `npm run verify` | The full gate by hand (`npm run check` then `npm run e2e`). On a clean tree it records the commit as verified, so the pre-push hook then passes instantly. **Run it before `git push`** (GitHub drops the connection if the hook takes minutes) |
 | `npm run server -- <command>` | Laptop-side deploy tool (`scripts/server.sh`: doctor, init, deploy, status, logs, health, tunnel, backup, pull-backups, restore, rollback; needs `.deploy.env`, see [docs/deployment.md](docs/deployment.md)) |
 | `npm run db:generate` | Generate a Drizzle migration after editing `src/db/schema.ts` |
 

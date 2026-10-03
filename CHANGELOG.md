@@ -6,7 +6,7 @@ All notable changes are recorded here, following [Keep a Changelog](https://keep
 
 ## [Unreleased]
 ### Added
-- Git hooks (`.githooks/`, install with `npm run hooks`): pre-commit runs lint, typecheck and the unit tests; pre-push runs the full check, build and e2e. `npm run verify` runs the full gate by hand. Tested in `src/git-hooks.test.ts`.
+- Git hooks (`.githooks/`, install with `npm run hooks`): pre-commit runs lint, typecheck and the unit tests; pre-push runs the full check, build and e2e. `npm run verify` runs the full gate by hand and records the verified commit so the push hook passes instantly. Tested in `src/git-hooks.test.ts`.
 
 ### Changed
 - `tsconfig.json` is committed in the format Next rewrites it to, so a build no longer leaves the working tree dirty.

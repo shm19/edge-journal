@@ -22,7 +22,7 @@ Config: `vitest.config.mts` (`.mts` so Vite loads it as ESM). `testTimeout` is 3
 ## Git hooks (run the tests without the model)
 Install once per clone with `npm run hooks` (sets `core.hooksPath` to `.githooks/`).
 - **pre-commit:** lint, typecheck and the unit/component tests (`src/deploy-scripts.test.ts` and `src/scripts.test.ts` are excluded: they take ~90 s). About a minute. A docs-only commit (`*.md`, `docs/`) skips everything. It checks the working tree, not the staged snapshot.
-- **pre-push:** `npm run check` (lint, typecheck, coverage thresholds, production build) and then `npm run e2e`. A few minutes.
+- **pre-push / `npm run verify`:** `npm run check` (lint, typecheck, coverage thresholds, production build) and then `npm run e2e`, a few minutes (`scripts/verify.sh`). On a clean working tree a green run is recorded in `.git/verified-<sha>`, and the hook then skips that commit. Run `npm run verify` BEFORE `git push`: git holds the GitHub connection open while a hook runs and GitHub drops idle connections after a few minutes, which fails the push.
 - Bypass once with `git commit --no-verify` / `git push --no-verify`. The hooks print one line per step and the tail of the output on a failure.
 - The hooks are tested in `src/git-hooks.test.ts` (stub `npm`/`npx` in a throwaway repo).
 
