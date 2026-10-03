@@ -47,3 +47,36 @@ describe("FilterBar Clear", () => {
     expect(box).toHaveValue("");
   });
 });
+
+describe("FilterBar date range", () => {
+  beforeEach(() => replace.mockClear());
+
+  it("is accented only when a from / to is set", () => {
+    search = "";
+    const { unmount } = render(<FilterBar {...props} />);
+    expect(screen.getByRole("button", { name: "Date range, Any date" }).className).not.toContain("border-accent/50");
+    unmount();
+    search = "from=2026-10-01&to=2026-10-02";
+    render(<FilterBar {...props} />);
+    expect(screen.getByRole("button", { name: "Date range, 2026-10-01 → 2026-10-02" }).className).toContain("border-accent/50");
+  });
+
+  it("shows a hand-edited inverted or junk range the way the server reads it", () => {
+    search = "from=2026-10-09&to=2026-10-01";
+    const { unmount } = render(<FilterBar {...props} />);
+    expect(screen.getByRole("button", { name: "Date range, 2026-10-01 → 2026-10-09" })).toBeInTheDocument();
+    unmount();
+    search = "from=junk&to=2026-02-30";
+    render(<FilterBar {...props} />);
+    expect(screen.getByRole("button", { name: "Date range, Any date" })).toBeInTheDocument();
+  });
+
+  it("writes a typed From as a YYYY-MM-DD URL param", async () => {
+    search = "";
+    window.history.replaceState(null, "", "/analytics");
+    render(<FilterBar {...props} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Date range/ }));
+    await userEvent.type(screen.getByLabelText("From (UTC)"), "2026-10-01");
+    expect(replace).toHaveBeenLastCalledWith("/analytics?from=2026-10-01", { scroll: false });
+  });
+});

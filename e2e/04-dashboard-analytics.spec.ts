@@ -42,3 +42,32 @@ test("analytics: skipped & missed tab", async ({ page }) => {
   await expect(page.getByText("R:R too small").locator("visible=true").first()).toBeVisible();
   await expect(page.getByText("R to the FTA was too small")).toBeVisible(); // skip log
 });
+
+test("date-range filter: typed and preset ranges set from / to as YYYY-MM-DD", async ({ page }) => {
+  await page.goto("/ideas");
+  await page.getByRole("button", { name: /^Date range/ }).click();
+  await page.getByLabel("From (UTC)").fill("2026-10-01");
+  await page.getByLabel("To (UTC)").fill("2026-10-02");
+  await expect(page).toHaveURL(/from=2026-10-01&to=2026-10-02/);
+  // The list really filters: ETH was opened on 2026-10-02 (spec 02), so it is in this range and not in an earlier one.
+  await expect(page.getByRole("link", { name: /ETH/ }).first()).toBeVisible();
+  await page.getByLabel("From (UTC)").fill("2026-09-01");
+  await page.getByLabel("To (UTC)").fill("2026-09-02");
+  await expect(page).toHaveURL(/from=2026-09-01&to=2026-09-02/);
+  await expect(page.getByRole("link", { name: /ETH/ })).toHaveCount(0);
+  await page.getByLabel("From (UTC)").fill("2026-10-01");
+  await page.getByLabel("To (UTC)").fill("2026-10-02");
+  await expect(page.getByRole("link", { name: /ETH/ }).first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Date range, 2026-10-01 → 2026-10-02" })).toBeFocused();
+  await page.getByRole("button", { name: /^Date range/ }).click();
+  await page.getByRole("button", { name: "Yesterday" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0); // a preset closes the popover
+  await expect(page).toHaveURL(/from=(\d{4}-\d{2}-\d{2})&to=\1/);
+  await page.getByRole("button", { name: /^Date range/ }).click();
+  await page.getByRole("button", { name: "Last 7 days" }).click();
+  await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
+  await page.getByRole("button", { name: /^Date range/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Clear" }).click();
+  await expect(page).not.toHaveURL(/from=/);
+});

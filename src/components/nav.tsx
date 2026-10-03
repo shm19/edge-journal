@@ -23,13 +23,13 @@ export function Sidebar({ logout }: { logout: () => Promise<void> }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // "n" anywhere (outside inputs, never inside an editor) → new idea.
+  // "n" anywhere (outside inputs and popovers, never inside an editor) → new idea.
   const inEditor = /^\/(ideas|setups)\/(new|\d+\/edit)$/.test(pathname);
   useEffect(() => {
     if (inEditor) return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
-      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "BUTTON"].includes(el.tagName))) return;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "BUTTON"].includes(el.tagName) || el.closest('[role="dialog"]'))) return;
       if (e.key === "n" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         router.push("/ideas/new");

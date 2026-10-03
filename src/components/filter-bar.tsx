@@ -6,8 +6,10 @@ import { useEffect, useState, useTransition } from "react";
 import type { Setup, Tag } from "@/db/schema";
 import { BIASES, IDEA_STATUSES, TIMEFRAMES } from "@/db/schema";
 import { cn } from "@/lib/cn";
+import { normalizeRange } from "@/lib/date-input";
 import { BIAS_LABEL, STATUS_LABEL } from "@/lib/format";
 import { Select } from "./ui";
+import { DateRangePicker } from "./ui/date-picker";
 
 const sel = "h-8 rounded-lg border border-line bg-panel-2 px-2 text-xs text-fg focus:outline-none focus:border-accent/60";
 
@@ -58,6 +60,8 @@ export function FilterBar({
   };
   const active = [...sp.keys()].filter((k) => k !== "group" && k !== "metric" && k !== "tab").length > 0 || q !== "";
 
+  // A hand-edited URL may hold junk or an inverted range; show what the server actually filters by.
+  const range = normalizeRange(sp.get("from") ?? "", sp.get("to") ?? "");
   const tagGroups = [...new Set(tags.map((t) => t.group))];
 
   return (
@@ -133,8 +137,14 @@ export function FilterBar({
         <option value="long">Long</option>
         <option value="short">Short</option>
       </Select>
-      <input type="date" className={sel} value={sp.get("from") ?? ""} onChange={(e) => update({ from: e.target.value })} aria-label="From" />
-      <input type="date" className={sel} value={sp.get("to") ?? ""} onChange={(e) => update({ to: e.target.value })} aria-label="To" />
+      <DateRangePicker
+        from={range[0]}
+        to={range[1]}
+        onChange={(from, to) => {
+          const [f, t] = normalizeRange(from, to);
+          update({ from: f, to: t });
+        }}
+      />
       <div className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes…" className={cn(sel, "w-40 pl-7")} />

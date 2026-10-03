@@ -78,11 +78,6 @@ body {
   margin: 0.75rem 0 0.25rem;
 }
 
-input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.8);
-}
-
 /* Number inputs without spinners */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {

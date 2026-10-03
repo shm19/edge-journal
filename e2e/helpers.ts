@@ -65,3 +65,11 @@ export async function chooseOption(page: Page, label: string, option: string) {
   await page.getByLabel(label, { exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 }
+
+/** Type a UTC date-time ("YYYY-MM-DD HH:mm") into a DateTimeField such as "Opened (UTC)". */
+export async function setDateTime(page: Page, label: string, value: string) {
+  const input = page.getByLabel(label, { exact: true });
+  await input.fill(value);
+  await expect(input).toHaveValue(value);
+  await expect(input).not.toHaveAttribute("aria-invalid", "true");
+}

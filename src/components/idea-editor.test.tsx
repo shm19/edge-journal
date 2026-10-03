@@ -128,8 +128,8 @@ describe("not filled", () => {
 });
 
 describe("closing time", () => {
-  const closedInput = () => screen.getByLabelText(/Closed \(UTC\)/) as HTMLInputElement;
-  const openedInput = () => screen.getByLabelText(/Opened \(UTC\)/) as HTMLInputElement;
+  const closedInput = () => screen.getByLabelText("Closed (UTC)") as HTMLInputElement;
+  const openedInput = () => screen.getByLabelText("Opened (UTC)") as HTMLInputElement;
 
   it("defaults to the open time (labelled) rather than now, and Still open takes it back", async () => {
     const initial = { ...newEditorIdea({ symbol: "BTC" }), openedAt: "2026-09-10T10:00:00.000Z" };
@@ -137,21 +137,21 @@ describe("closing time", () => {
     expect(closedInput().value).toBe("");
     await fillPrimary(user);
     await user.type(screen.getAllByLabelText("Exit")[0], "110");
-    expect(closedInput().value).toBe("2026-09-10T10:00");
+    expect(closedInput().value).toBe("2026-09-10 10:00");
     expect(screen.getByText(/Set to the open time/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Still open" }));
     expect(closedInput().value).toBe("");
-    expect(openedInput().value).toBe("2026-09-10T10:00");
+    expect(openedInput().value).toBe("2026-09-10 10:00");
   });
 
   it("keeps a time the user typed when the trade is reopened", async () => {
     const initial = { ...newEditorIdea({ symbol: "BTC" }), openedAt: "2026-09-10T10:00:00.000Z" };
     const user = renderEditor(initial);
     await fillPrimary(user, "110");
-    fireEvent.change(closedInput(), { target: { value: "2026-09-11T08:30" } });
+    fireEvent.change(closedInput(), { target: { value: "2026-09-11 08:30" } });
     expect(screen.queryByText(/Set to the open time/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Still open" }));
-    expect(closedInput().value).toBe("2026-09-11T08:30");
+    expect(closedInput().value).toBe("2026-09-11 08:30");
   });
 });
 
@@ -251,6 +251,39 @@ describe("mistake cost", () => {
     await user.click(screen.getByRole("button", { name: "Remove alternative" }));
     expect(screen.queryByText(/(lost|saved)$/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("Measure against alternative")).toHaveTextContent("No alternatives yet");
+  });
+});
+
+describe("invalid typed dates block saving", () => {
+  it("Save and Cmd+Enter refuse while Closed holds invalid text, naming the field, then save once it is fixed", async () => {
+    saveIdea.mockResolvedValue({ ok: true, data: { id: 9 } });
+    const user = renderEditor();
+    await fillPrimary(user, "110");
+    const closed = screen.getByLabelText("Closed (UTC)");
+    await user.clear(closed);
+    await user.type(closed, "2026-02-30 10:00");
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    expect(screen.getAllByRole("alert").map((a) => a.textContent).join(" ")).toMatch(/Fix the Closed date first/);
+    act(() => {
+      fireEvent.keyDown(window, { key: "Enter", metaKey: true });
+    });
+    expect(saveIdea).not.toHaveBeenCalled();
+    await user.clear(closed);
+    await user.type(closed, "2026-10-02 10:00");
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    expect(saveIdea).toHaveBeenCalledTimes(1);
+  });
+
+  it("a required Opened box that was emptied blocks too, and both names are listed", async () => {
+    const user = renderEditor();
+    await fillPrimary(user, "110");
+    await user.clear(screen.getByLabelText("Opened (UTC)"));
+    const closed = screen.getByLabelText("Closed (UTC)");
+    await user.clear(closed);
+    await user.type(closed, "nope");
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    expect(screen.getAllByRole("alert").map((a) => a.textContent).join(" ")).toMatch(/Fix the Opened and Closed date first/);
+    expect(saveIdea).not.toHaveBeenCalled();
   });
 });
 

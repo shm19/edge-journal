@@ -6,7 +6,7 @@ import { setClosedAt, setOpenedAt, setStatus, type EditorIdea } from "@/lib/edit
 import { BIAS_LABEL, REGIME_LABEL, STATUS_LABEL } from "@/lib/format";
 import { isoToZonedInput, zonedInputToIso } from "@/lib/tz";
 import { Card, Field, Input, Segmented, Select } from "../ui";
-import { DateTimeField } from "./date-time-field";
+import { DateTimeField } from "../ui/date-picker";
 
 /** Status, coin, direction, setup, dates and the three context selects. */
 export function ContextCard({
@@ -15,12 +15,15 @@ export function ContextCard({
   set,
   setups,
   symbols,
+  onInvalidDate,
 }: {
   idea: EditorIdea;
   setIdea: Dispatch<SetStateAction<EditorIdea>>;
   set: <K extends keyof EditorIdea>(k: K, v: EditorIdea[K]) => void;
   setups: Setup[];
   symbols: string[];
+  /** A date box holds text that is not a valid date-time (so saving would silently drop it). */
+  onInvalidDate: (label: string, invalid: boolean) => void;
 }) {
   const changeSetup = (id: number | null) => {
     const ticked = Object.values(idea.checklistState).filter(Boolean).length;
@@ -110,20 +113,22 @@ export function ContextCard({
           <DateTimeField
             id="idea-opened"
             label="Opened (UTC)"
+            required
+            onInvalidChange={(bad) => onInvalidDate("Opened", bad)}
             value={isoToZonedInput(idea.openedAt)}
             onChange={(v) => {
-              const iso = zonedInputToIso(v);
+              const iso = v ? zonedInputToIso(v) : null;
               if (iso) setIdea((p) => setOpenedAt(p, iso));
             }}
-            onNow={() => setIdea((p) => setOpenedAt(p, new Date().toISOString()))}
           />
           <DateTimeField
             id="idea-closed"
             label="Closed (UTC)"
             value={isoToZonedInput(idea.closedAt)}
             onChange={(v) => setIdea((p) => setClosedAt(p, v ? zonedInputToIso(v) : null))}
-            onNow={() => setIdea((p) => setClosedAt(p, new Date().toISOString()))}
-            onClear={idea.closedAt ? () => setIdea((p) => setClosedAt(p, null)) : undefined}
+            clearable={!!idea.closedAt}
+            onInvalidChange={(bad) => onInvalidDate("Closed", bad)}
+            copyFrom={{ label: "Same as opened", value: isoToZonedInput(idea.openedAt) }}
             hint={idea.closedAtAuto ? "Set to the open time — adjust if the trade closed later." : undefined}
           />
         </div>

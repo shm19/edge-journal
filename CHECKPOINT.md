@@ -90,7 +90,7 @@ Every step must also pass the usual checks: `npm test`, `typecheck`, `lint`, `bu
 
 **After Step 3b:** coverage must not drop below the thresholds.
 
-**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → ~~3b~~ → ~~5~~ → 5 → 6 → 7. (Step 0 is done.)
+**Recommended order:** ~~0~~ → ~~2~~ → ~~2b~~ → ~~3~~ → ~~4~~ → ~~3b~~ → ~~5~~ → ~~6~~ → 5 → 6 → 7. (Step 0 is done.)
 
 **Process for every step and change:** follow [docs/workflow.md](docs/workflow.md).
 1. Scope.
@@ -484,7 +484,25 @@ Add `npm run e2e`.
   - the setup editor (default TF).
 - **Done when:** no plain `<select>` is left in the app UI; it works with keyboard only.
 
-### ☐ Step 6: Better date & time picker
+### ☑ Step 6: Better date & time picker (done 2026-10-03)
+**In one line:** the plain date and time boxes are replaced by a calendar popup (in UTC) with Now/Clear and range presets for the journal filter.
+
+**Workflow checklist:**
+- [x] 1 Scope: below.
+- [x] 2 Built with Shayan's lazy-developer skill. Rung 7 (custom code), no new dependency: `react-day-picker` needs `@date-fns/tz` to be UTC and its "today" is hard to pin in tests; a Monday-first grid on the existing Radix Popover is about 100 lines of UTC string maths. Pure helpers in `src/lib/date-input.ts` (100% covered, in the `pure` group); UI in `src/components/ui/date-picker.tsx` (Calendar, DateTimeField, DateRangePicker).
+- [x] 3a Code review: no P0; 2 P1 (stale range anchor, Cmd+Enter saving stale state), 12 P2.
+- [x] 3b Product review (live UI): no P0; 4 P1 (no "same as opened" shortcut, errors on every keystroke, date-only typing rejected, range needed Done), 9 P2.
+- [x] 4 Triage: all P1 and the cheap P2 applied (see below).
+- [x] 5 `npm run check` green (452 tests in 29 files, was 362/26); `npm run e2e` 18/18.
+- [x] 6 Docs: AGENTS, architecture, testing, e2e, CHANGELOG.
+- [x] 7 Browser (1280 px): journal "Any date" popover (presets, From/To, UTC today highlighted), editor Closed popover (Now, Same as opened, Done; time seeded from Opened). Also found and fixed a Step 5 regression: the filter-bar dropdowns each took a full row (now `size="sm"` is `w-auto`).
+- [x] 8 Committed (see `git log`).
+
+**Notes:**
+- Closed field: "Same as opened"; an empty Closed calendar opens on the Opened month and a day pick takes Opened's time. Typed entry accepts a full value, a date alone, a time alone, or a pasted ISO string; the format error shows on blur. Save is blocked while Opened/Closed hold invalid text. A range pick closes on the end click; presets are Today, Yesterday, This week (Mon to today), Last 7 days, Last 30 days, This month. Invalid or inverted `from`/`to` in the URL are normalised server-side.
+- Backlog (not built): per-chip clear, preset label wording, tab order of the calendar buttons, hiding trailing week rows, `emptyIdea()` reading the clock at render (possible SSR/client minute mismatch).
+
+**Original plan:**
 - A UTC date-time picker with:
   - a popover calendar (month navigation, today, a clear month/year header);
   - a time input (HH:mm, 24h);
@@ -518,6 +536,7 @@ Add `npm run e2e`.
 - **Done when:** the numbers match a hand calculation on a known set (e.g. +2R, −1R, +3R at 1% on $1,000, both modes); it works with filters; it's linked from the dashboard and setup pages.
 
 ## Backlog (not scheduled)
+- Date picker polish from the Step 6 reviews: per-chip clear, preset wording, calendar-button tab order, trailing week rows, `emptyIdea()` clock at render.
 - Test polish from the Step 3b review: `functions: 100` on the pure group, a stronger `metrics.test.ts`, `tempDb()` cleanup, make e2e specs independent (setup project), scope a few e2e locators, explicit env keys in the e2e web server, one shared e2e data-dir constant.
 - Filter by "No tag" in the filter bar (the analytics "No tag" rows have no matching filter).
 - Login throttle: take the rightmost `X-Forwarded-For`, escalating locks, size cap; session versioning for logout-everywhere; auth assert in `loadIdeas`.

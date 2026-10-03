@@ -3,6 +3,7 @@
 import { IDEA_STATUSES, type IdeaStatus } from "@/db/schema";
 import type { IdeaView } from "./queries";
 import { BIAS_LABEL, EXIT_LABEL, REGIME_LABEL, STATUS_LABEL } from "./format";
+import { normalizeRange } from "./date-input";
 import { isOpen } from "./status";
 import { compareScenarios, monthOf, sessionOf, weekdayOf, type ComparisonPair, type RPoint } from "./stats";
 import { zonedDate } from "./tz";
@@ -34,6 +35,8 @@ export function parseFilters(sp: Record<string, string | string[] | undefined>):
     const v = Number(one(k));
     return Number.isFinite(v) && v > 0 ? v : undefined;
   };
+  // Only real dates, in order (a hand-edited or inverted URL must not silently empty the list).
+  const [from, to] = normalizeRange(one("from") ?? "", one("to") ?? "");
   return {
     status: statusRaw ? (statusRaw.split(",").filter((s) => (IDEA_STATUSES as readonly string[]).includes(s)) as IdeaStatus[]) : undefined,
     setupId: num("setup"),
@@ -42,8 +45,8 @@ export function parseFilters(sp: Record<string, string | string[] | undefined>):
     timeframe: one("tf"),
     bias: one("bias"),
     direction: one("dir"),
-    from: one("from"),
-    to: one("to"),
+    from: from || undefined,
+    to: to || undefined,
     q: one("q"),
     open: one("open") === "1",
   };

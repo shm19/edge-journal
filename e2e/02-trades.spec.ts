@@ -1,4 +1,4 @@
-import { authed as test, chooseOption, expect, fillPrices, newIdea, saveIdea, TINY_PNG } from "./helpers";
+import { authed as test, chooseOption, expect, fillPrices, newIdea, saveIdea, setDateTime, TINY_PNG } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -39,7 +39,27 @@ test("second taken trade, a winner", async ({ page }) => {
   await newIdea(page, "Taken", "ETH");
   await fillPrices(page, 0, { entry: "200", stop: "190", target: "230" });
   await page.getByRole("button", { name: "Hit target" }).first().click(); // +3R
+
+  // Typed UTC times round-trip; the calendar popover opens, picks a day and returns focus on Escape.
+  await setDateTime(page, "Opened (UTC)", "2026-10-02 14:30");
+  await setDateTime(page, "Closed (UTC)", "2026-10-02 23:59");
+  const calendar = page.getByRole("button", { name: "Open calendar for Closed (UTC)" });
+  await calendar.click();
+  await page.getByRole("button", { name: "3 October 2026, Saturday" }).click(); // keeps the time
+  await expect(page.getByLabel("Closed (UTC)", { exact: true })).toHaveValue("2026-10-03 23:59");
+  await page.keyboard.press("Escape");
+  await expect(calendar).toBeFocused();
+  await page.getByLabel("Opened (UTC)", { exact: true }).fill("2026-02-30 10:00");
+  await expect(page.getByText("Use YYYY-MM-DD HH:mm (24h, UTC).")).toBeVisible();
+  // Invalid text must not be silently dropped: Save is refused and names the field.
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Fix the Opened date first")).toBeVisible();
+  await expect(page).toHaveURL(/\/ideas\/new$/);
+  await setDateTime(page, "Opened (UTC)", "2026-10-02 14:30");
+
   await saveIdea(page);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("ETH");
+  await expect(page.getByText("14:30").first()).toBeVisible();
+  await expect(page.getByText("23:59").first()).toBeVisible();
   await expect(page.getByText("+3.00R").first()).toBeVisible();
 });

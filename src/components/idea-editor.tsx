@@ -58,6 +58,13 @@ export function IdeaEditor({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const saving = useRef(false);
+  // Date boxes holding text that is not a valid date-time; saving is blocked meanwhile (it would drop the text).
+  const [invalidDates, setInvalidDates] = useState<string[]>([]);
+  const onInvalidDate = useCallback(
+    (label: string, invalid: boolean) =>
+      setInvalidDates((p) => (p.includes(label) === invalid ? p : invalid ? [...p, label] : p.filter((l) => l !== label))),
+    [],
+  );
   const [baseline] = useState(() => JSON.stringify(initial));
   const dirty = JSON.stringify(idea) !== baseline;
 
@@ -107,6 +114,10 @@ export function IdeaEditor({
       setError("Wait for screenshots to finish uploading");
       return;
     }
+    if (invalidDates.length) {
+      setError(`Fix the ${invalidDates.join(" and ")} date first: use YYYY-MM-DD HH:mm (UTC).`);
+      return;
+    }
     setError(null);
     const built = buildSavePayload(idea);
     if (!built.ok) {
@@ -124,7 +135,7 @@ export function IdeaEditor({
       router.push(`/ideas/${res.data!.id}`);
       router.refresh();
     });
-  }, [idea, pending, uploading, router]);
+  }, [idea, pending, uploading, invalidDates, router]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -151,7 +162,7 @@ export function IdeaEditor({
     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-5" {...dropProps}>
       {/* ---------- Left column: context ---------- */}
       <div className="space-y-5">
-        <ContextCard idea={idea} setIdea={setIdea} set={set} setups={setups} symbols={symbols} />
+        <ContextCard idea={idea} setIdea={setIdea} set={set} setups={setups} symbols={symbols} onInvalidDate={onInvalidDate} />
         {setup && setup.checklist.length > 0 && <ChecklistCard setup={setup} state={idea.checklistState} onChange={(v) => set("checklistState", v)} />}
         <TagsCard tags={tags} selected={idea.tagIds} onChange={(ids) => set("tagIds", ids)} />
       </div>

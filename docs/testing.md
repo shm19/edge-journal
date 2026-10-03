@@ -15,7 +15,7 @@ Config: `vitest.config.mts` (`.mts` so Vite loads it as ESM). `testTimeout` is 3
 | Pure logic | `src/lib/*.test.ts` | No DB, no mocks. Build views with `test/fixtures.ts` (`makeIdea`, `makeScenario`, `makeMistake`, `makeSetup`, `makeTag`). |
 | Server logic (DB) | `src/lib/{queries,actions*}.test.ts`, `src/db/seed.test.ts`, `src/app/api/routes.test.ts` | Real SQLite in a temp dir. |
 | Auth | `src/lib/auth.test.ts`, `session.test.ts`, `login-guard.test.ts`, `src/proxy.test.ts` | `next/headers` and `next/navigation` mocked. |
-| Components | `src/components/ui/select.test.tsx` tests `Select` itself (19 tests; suite total 362 in 26 files); `src/components/**/*.test.tsx` (`test/select.ts` `chooseOption(user, label, option)` drives the custom `Select`; `test/setup-dom.ts` polyfills `ResizeObserver` and `scrollIntoView`) | `// @vitest-environment jsdom`, React Testing Library; `test/setup-dom.ts` adds jest-dom matchers. |
+| Components | `src/components/ui/select.test.tsx` tests `Select` itself (19 tests) and `src/components/ui/date-picker.test.tsx` the calendar pickers (50 tests, `Date` faked to 2026-10-02 23:30 UTC), `src/components/nav.test.tsx` the "n" shortcut (3 tests); suite total 452 in 29 files; `src/components/**/*.test.tsx` (`test/select.ts` `chooseOption(user, label, option)` drives the custom `Select`; `test/setup-dom.ts` polyfills `ResizeObserver` and `scrollIntoView`) | `// @vitest-environment jsdom`, React Testing Library; `test/setup-dom.ts` adds jest-dom matchers. |
 
 ## Temp-DB helper: `tempDb` (`test/db.ts`)
 The DB opens lazily and caches its connection, so each test file does:

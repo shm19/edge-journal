@@ -27,6 +27,14 @@ describe("parseFilters", () => {
     expect(f.open).toBe(true);
     expect(f.direction).toBe("long");
   });
+  it("keeps only real dates, orders an inverted range and drops junk", () => {
+    expect(parseFilters({ from: "2026-10-01", to: "2026-10-05" })).toMatchObject({ from: "2026-10-01", to: "2026-10-05" });
+    expect(parseFilters({ from: "2026-10-09", to: "2026-10-01" })).toMatchObject({ from: "2026-10-01", to: "2026-10-09" });
+    expect(parseFilters({ from: "2026-02-30", to: "nope" })).toMatchObject({ from: undefined, to: undefined });
+    expect(parseFilters({ from: "junk", to: "2026-10-05" })).toMatchObject({ from: undefined, to: "2026-10-05" });
+    expect(parseFilters({ to: ["2026-1-5", "x"] }).to).toBe("2026-01-05");
+    expect(parseFilters({}).from).toBeUndefined();
+  });
   it("leaves status undefined when absent", () => {
     expect(parseFilters({}).status).toBeUndefined();
     expect(parseFilters({}).open).toBe(false);

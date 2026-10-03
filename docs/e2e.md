@@ -9,18 +9,18 @@
   - `DATA_DIR` = `$TMPDIR/edge-journal-e2e-3300`, wiped before the build and removed again by `e2e/global-teardown.ts`;
   - throwaway `APP_PASSWORD` / `SESSION_SECRET` from `e2e/env.ts` (not your real ones; `.env.local` is overridden), `COOKIE_SECURE=false`, `NODE_ENV=production`.
 - Port **3300** is reserved for this. It fails if something already listens there (`reuseExistingServer: false`).
-- One worker, no retries. A full run takes about 1.5 minutes (roughly 1 minute is the build, the 17 tests take about 40 s).
+- One worker, no retries. A full run takes about 1.5 minutes (roughly 1 minute is the build, the 18 tests take about 40 s).
 - Needs Node 22 on `PATH` (see AGENTS.md).
 
 ## Layout
 | File | Covers |
 |---|---|
 | `e2e/env.ts` | Port, base URL, throwaway secrets |
-| `e2e/helpers.ts` | `test` (fails on any console error or page error), `authed` (logged-in page), editor helpers, `kpi()` |
+| `e2e/helpers.ts` | `test` (fails on any console error or page error), `authed` (logged-in page), editor helpers, `kpi()`, `chooseOption()`, `setDateTime()` |
 | `01-login.spec.ts` | Wrong password, 5-failure lock (own fake client IP), right password, `?next=` kept, off-site `?next=` ignored |
-| `02-trades.spec.ts` | Taken BTC trade (-1R) with a BE stop alternative, an inline-created mistake measured against it (-1.00R), a screenshot upload; a winning ETH trade (+3R) |
+| `02-trades.spec.ts` | Taken BTC trade (-1R) with a BE stop alternative, an inline-created mistake measured against it (-1.00R), a screenshot upload; a winning ETH trade (+3R) with typed / picked UTC open and close times |
 | `03-skip-forward.spec.ts` | Skipped idea with a skip-reason tag, Hit and Miss forward tests with no prices |
-| `04-dashboard-analytics.spec.ts` | Dashboard KPIs against hand-calculated numbers, group-by, alternatives tab, skips tab |
+| `04-dashboard-analytics.spec.ts` | Dashboard KPIs against hand-calculated numbers, group-by, alternatives tab, skips tab, date-range filter (typed, preset, Clear) |
 | `05-settings-export-logout.spec.ts` | Tag and mistake-type add / rename / delete, CSV export, sign out |
 
 ## Rules

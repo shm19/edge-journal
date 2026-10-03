@@ -6,6 +6,9 @@ import { Check, ChevronDown } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/lib/cn";
 
+/** Border, background and shadow shared by every popover surface (select list, calendar pickers). */
+export const POPOVER_CHROME = "z-50 rounded-lg border border-line-strong bg-panel shadow-xl shadow-black/40";
+
 /** Show the search box only above this many options. */
 export const SEARCH_THRESHOLD = 8;
 const TYPEAHEAD_MS = 700;
@@ -162,9 +165,9 @@ export function Select({ value, onChange, children, name, size = "md", active: a
           }
         }}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-lg border border-line bg-panel-2 text-left text-fg focus:outline-none focus-visible:border-accent/70 focus-visible:ring-2 focus-visible:ring-accent/20 disabled:opacity-60",
+          "flex items-center justify-between gap-2 rounded-lg border border-line bg-panel-2 text-left text-fg focus:outline-none focus-visible:border-accent/70 focus-visible:ring-2 focus-visible:ring-accent/20 disabled:opacity-60",
           accent && "border-accent/50 text-accent",
-          size === "sm" ? "h-8 px-2 text-xs" : "h-9 px-3 text-sm",
+          size === "sm" ? "h-8 w-auto min-w-28 px-2 text-xs" : "h-9 w-full px-3 text-sm",
           className,
         )}
         {...props}
@@ -183,7 +186,7 @@ export function Select({ value, onChange, children, name, size = "md", active: a
             e.preventDefault();
             inputRef.current?.focus();
           }}
-          className="z-50 w-max min-w-(--radix-popover-trigger-width) max-w-80 rounded-lg border border-line-strong bg-panel p-1 shadow-xl shadow-black/40"
+          className={cn(POPOVER_CHROME, "w-max min-w-(--radix-popover-trigger-width) max-w-80 p-1")}
         >
           <Command
             shouldFilter={searchable}
